@@ -40,8 +40,8 @@ function logout() {
 }
 
 function startNewGame() {
-  // Plus tard : rediriger vers la page de jeu
-  alert('Nouvelle partie - Interface de jeu à venir !');
+  // Rediriger vers la page d'analyse
+  router.push('/analyze');
 }
 </script>
 

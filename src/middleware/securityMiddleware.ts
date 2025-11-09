@@ -6,7 +6,11 @@ import { Request, Response, NextFunction } from 'express';
 
 // Configuration CORS
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: [
+    process.env.FRONTEND_URL || 'http://localhost:3000',
+    'http://localhost:5173', // Frontend Vue.js development server
+    'http://127.0.0.1:5173'  // Alternative localhost
+  ],
   credentials: true, // Permettre les cookies/headers d'auth
   optionsSuccessStatus: 200
 };
