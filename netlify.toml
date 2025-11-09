@@ -1,16 +1,11 @@
 [build]
-  base = "/"
-  command = "echo 'Backend functions build'"
-  functions = "netlify/functions/"
+  functions = "netlify/functions"
   publish = "public"
 
-[build.environment]
-  NODE_VERSION = "18"
-  DATABASE_URL = "postgresql://postgres:Jaimedonnaafrejus06.@db.nhhxgnmjsmpyyfmngoyf.supabase.co:5432/postgres"
-  SUPABASE_URL = "https://nhhxgnmjsmpyyfmngoyf.supabase.co"
-  SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oaHhnbm1qc21weXlmbW5nb3lmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI2OTI0NDIsImV4cCI6MjA3ODI2ODQ0Mn0.jh8CpeHnMo-1dXFVHa5OSEfAz6Ha-lo72RUyQ_vM4_0"
-  SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5oaHhnbm1qc21weXlmbW5nb3lmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2MjY5MjQ0MiwiZXhwIjoyMDc4MjY4NDQyfQ.BZb5oVS_6vqKruVO4xUXc-4VLSkPoSGsypr6xcpNR-w"
-  JWT_SECRET = "gammon-guru-jwt-secret-cloud-32-caracteres-minimum"
+[dev]
+  functions = "netlify/functions"
+  publish = "public"
+  port = 8888
 
 [[redirects]]
   from = "/api/*"
@@ -20,23 +15,6 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    X-Frame-Options = "DENY"
-    X-XSS-Protection = "1; mode=block"
-    X-Content-Type-Options = "nosniff"
-    Referrer-Policy = "strict-origin-when-cross-origin"
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
     Access-Control-Allow-Headers = "Content-Type, Authorization"
-
-# Headers spécifiques pour functions
-[[headers]]
-  for = "/.netlify/functions/*"
-  [headers.values]
-    Access-Control-Allow-Origin = "*"
-    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
-    Access-Control-Allow-Headers = "Content-Type, Authorization"
-
-[dev]
-  framework = "vue"
-  targetPort = 3000
-  autoLaunch = false

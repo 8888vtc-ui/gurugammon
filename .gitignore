@@ -10,3 +10,15 @@ dist/
 test-db-connection.js
 test-api-simple.js
 test-netlify-functions.js
+test-database-complete.js
+test-api-complete.js
+test-api-local.js
+
+# Local Netlify folder
+.netlify
+
+# Frontend build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/.nuxt/
+frontend/.output/
