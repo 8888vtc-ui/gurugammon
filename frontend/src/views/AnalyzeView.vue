@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import api from '@/services/api';
 
 const router = useRouter();
 const boardState = ref('');
@@ -49,27 +50,34 @@ async function analyzeMove() {
       return;
     }
     
-    // MODE TEST : Simulation d'analyse GNUBG
-    await new Promise(resolve => setTimeout(resolve, 2000)); // Simuler le temps de traitement
+    // VRAI APPEL API GNUBG
+    console.log('🤖 Appel API GNUBG avec:', {
+      board: boardState.value,
+      dice: JSON.parse(dice.value),
+      move: move.value
+    });
     
-    const mockAnalysis = {
-      isValid: Math.random() > 0.3,
-      equity: (Math.random() * 0.6 - 0.3).toFixed(3),
-      pr: (Math.random() * 10).toFixed(1),
-      bestMove: move.value || '13/10 6/5',
-      alternatives: [
-        {
-          move: '13/10 6/5',
-          equity: (Math.random() * 0.6 - 0.3).toFixed(3),
-          equityLoss: (Math.random() * 0.1).toFixed(3)
-        }
-      ],
-      explanation: generateExplanation(),
-      difficulty: 'Intermédiaire',
-      learningPoints: generateLearningPoints()
+    const response = await api.post('/gnubg/evaluate', {
+      board: boardState.value,
+      dice: JSON.parse(dice.value),
+      move: move.value
+    });
+    
+    console.log('✅ Réponse GNUBG:', response.data);
+    
+    const realAnalysis = response.data.data;
+    
+    // Formater les résultats réels de GNUBG
+    analysis.value = {
+      isValid: realAnalysis.isValid || true,
+      equity: realAnalysis.equity || '0.000',
+      pr: realAnalysis.pr || '0.0',
+      bestMove: realAnalysis.bestMove || move.value,
+      alternatives: realAnalysis.alternatives || [],
+      explanation: realAnalysis.explanation || 'Analyse GNUBG complétée avec succès.',
+      difficulty: realAnalysis.difficulty || 'Intermédiaire',
+      learningPoints: realAnalysis.learningPoints || ['Analyse basée sur GNUBG CLI']
     };
-    
-    analysis.value = mockAnalysis;
     
     // Mettre à jour le quota
     const currentAnalyses = parseInt(localStorage.getItem('analysesThisMonth') || '0');
@@ -78,33 +86,22 @@ async function analyzeMove() {
     analysesRemaining.value--;
     
   } catch (err: any) {
-    error.value = `Erreur lors de l'analyse: ${err.message}`;
+    console.error('❌ Erreur API GNUBG:', err);
+    
+    // Gérer les erreurs spécifiques
+    if (err.response?.status === 401) {
+      error.value = 'Session expirée. Veuillez vous reconnecter.';
+      setTimeout(() => router.push('/login'), 2000);
+    } else if (err.response?.status === 500) {
+      error.value = 'Erreur serveur GNUBG. Vérifiez que GNUBG CLI est installé.';
+    } else if (err.code === 'ECONNREFUSED') {
+      error.value = 'Backend inaccessible. Démarrez le serveur backend (npm run dev).';
+    } else {
+      error.value = `Erreur lors de l'analyse: ${err.response?.data?.error || err.message}`;
+    }
   } finally {
     loading.value = false;
   }
-}
-
-function generateExplanation(): string {
-  const explanations = [
-    "Ce coup est techniquement correct mais il existe une alternative légèrement meilleure. La différence d'équité est minime (0.023), ce qui montre que votre compréhension tactique est bonne.",
-    "Excellent coup ! C'est le meilleur mouvement possible selon GNUBG. Votre équité est maximale et vous ne perdez aucun point par rapport à la perfection théorique.",
-    "Ce coup présente une erreur significative. Le mouvement alternatif vous aurait donné une meilleure position de 0.089 points d'équité. Essayez de toujours considérer la sécurité de vos arrières.",
-    "Bon coup dans l'ensemble, mais attention à ne pas trop exposer vos pions. L'alternative proposée est plus conservatrice et sécurise votre position."
-  ];
-  
-  return explanations[Math.floor(Math.random() * explanations.length)];
-}
-
-function generateLearningPoints(): string[] {
-  const allPoints = [
-    "Considérez toujours la sécurité de vos pions exposés",
-    "Pensez à la flexibilité future de votre position",
-    "Évaluez l'impact sur les prochains jets de dés",
-    "Ne négligez pas l'importance du contrôle du centre",
-    "La sécurité des arrières est souvent prioritaire"
-  ];
-  
-  return allPoints.slice(0, Math.floor(Math.random() * 3) + 2);
 }
 
 function resetForm() {
