@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎲 GammonGuru - Backgammon Intelligence Artificielle</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(135deg, #f5deb3 0%, #deb887 50%, #d2691e 100%);
+            min-height: 100vh;
+            color: #654321;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            animation: fadeIn 1s ease-out;
+        }
+
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 10px;
+            animation: bounce 2s infinite;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            color: #8B4513;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #D2691E;
+            margin-bottom: 30px;
+        }
+
+        .status {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn {
+            background: #8B4513;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 5px;
+            box-shadow: 0 4px 6px rgba(139, 69, 19, 0.3);
+        }
+
+        .btn:hover {
+            background: #D2691E;
+            transform: scale(1.05);
+        }
+
+        .result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">🎲</div>
+            <h1 class="title">GammonGuru</h1>
+            <p class="subtitle">Backgammon Intelligence Artificielle</p>
+        </header>
+
+        <div class="status">
+            <div>🌐 APPLICATION EN PRODUCTION</div>
+            <p>Frontend Vue.js + Backend Netlify Functions + Database Supabase</p>
+        </div>
+
+        <div style="background: rgba(255, 255, 255, 0.9); border-radius: 10px; padding: 20px; margin-bottom: 30px; border: 2px solid #8B4513;">
+            <h3 style="text-align: center; margin-bottom: 20px; color: #8B4513;">🧪 TESTS API LIVE</h3>
+            <div style="text-align: center;">
+                <button class="btn" onclick="testAPI('login')">🔐 Test Login</button>
+                <button class="btn" onclick="testAPI('profile')">👤 Test Profile</button>
+                <button class="btn" onclick="testAPI('game')">🎮 Test Game</button>
+                <button class="btn" onclick="testAPI('analyze')">🧠 Test GNUBG</button>
+            </div>
+            <div id="api-result"></div>
+        </div>
+
+        <footer style="text-align: center; margin-top: 40px; padding: 20px; color: #654321; font-size: 0.9rem;">
+            <p>🚀 GammonGuru - Built with Vue.js + Netlify Functions + Supabase</p>
+            <p>🌐 Production Ready - Cloud Infrastructure - Serverless Architecture</p>
+        </footer>
+    </div>
+
+    <script>
+        async function testAPI(endpoint) {
+            const resultDiv = document.getElementById('api-result');
+            const API_BASE = '/.netlify/functions';
+            
+            let url, options, testName;
+            
+            switch(endpoint) {
+                case 'login':
+                    testName = 'Login Utilisateur';
+                    url = `${API_BASE}/auth/login`;
+                    options = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: 'codespaces-test@example.com',
+                            password: 'password123'
+                        })
+                    };
+                    break;
+                    
+                case 'profile':
+                    testName = 'Get Profile';
+                    url = `${API_BASE}/user/profile`;
+                    options = {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' }
+                    };
+                    break;
+                    
+                case 'game':
+                    testName = 'Create Game';
+                    url = `${API_BASE}/game/create`;
+                    options = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            gameMode: 'AI_VS_PLAYER',
+                            difficulty: 'MEDIUM'
+                        })
+                    };
+                    break;
+                    
+                case 'analyze':
+                    testName = 'GNUBG Analyze';
+                    url = `${API_BASE}/gnubg/analyze`;
+                    options = {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            boardState: '4HPwATDgc/ABMA',
+                            dice: [3, 1],
+                            move: '8/5 6/5',
+                            analysisType: 'full'
+                        })
+                    };
+                    break;
+            }
+            
+            resultDiv.innerHTML = `<div class="result">🔄 Test en cours: ${testName}...</div>`;
+            
+            try {
+                const response = await fetch(url, options);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            ✅ ${testName} - SUCCÈS<br>
+                            Status: ${response.status}<br>
+                            Response: ${JSON.stringify(data, null, 2).substring(0, 300)}...
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="result error">
+                            ❌ ${testName} - ÉCHEC<br>
+                            Status: ${response.status}<br>
+                            Error: ${data.error || 'Unknown error'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="result error">
+                        ❌ ${testName} - ERREUR RÉSEAU<br>
+                        ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
