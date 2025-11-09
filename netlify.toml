@@ -1,19 +1,34 @@
+# Netlify Configuration - GammonGuru Production
 [build]
+  # Directory contenant les functions
   functions = "netlify/functions"
+  # Directory public pour le frontend
   publish = "public"
+  # Build command (pas nécessaire pour functions seulement)
+  command = "echo 'GammonGuru Functions Build'"
 
+# Configuration développement local
 [dev]
   functions = "netlify/functions"
   publish = "public"
   port = 8888
 
+# Redirects API
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
+# Headers CORS
 [[headers]]
   for = "/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+[[headers]]
+  for = "/.netlify/functions/*"
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
