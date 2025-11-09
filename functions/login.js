@@ -2,6 +2,30 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
+const ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const rateStore = new Map();
+const rateLimit = (key, windowMs, max) => {
+  const now = Date.now();
+  const bucket = rateStore.get(key) || { count: 0, reset: now + windowMs };
+  if (now > bucket.reset) {
+    bucket.count = 0;
+    bucket.reset = now + windowMs;
+  }
+  bucket.count += 1;
+  rateStore.set(key, bucket);
+  return { allowed: bucket.count <= max, remaining: Math.max(0, max - bucket.count), reset: bucket.reset };
+};
+const buildHeaders = (event) => {
+  const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+  const allow = ALLOWED_ORIGINS.length ? (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]) : '*';
+  return {
+    'Access-Control-Allow-Origin': allow,
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+};
 
 // Initialiser Supabase
 const supabase = createClient(
@@ -10,13 +34,7 @@ const supabase = createClient(
 );
 
 exports.handler = async (event, context) => {
-  // CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json'
-  };
+  const headers = buildHeaders(event);
 
   // Handle preflight OPTIONS
   if (event.httpMethod === 'OPTIONS') {
@@ -37,6 +55,16 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    const ip = (event.headers && (event.headers['x-forwarded-for'] || event.headers['client-ip'])) || 'unknown';
+    const rl = rateLimit(`${ip}:login`, 60 * 1000, 5);
+    if (!rl.allowed) {
+      return {
+        statusCode: 429,
+        headers,
+        body: JSON.stringify({ error: 'Too many requests', retryAfterSeconds: Math.ceil((rl.reset - Date.now())/1000) })
+      };
+    }
+
     const { email, password } = JSON.parse(event.body);
 
     // Validation

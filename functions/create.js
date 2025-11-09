@@ -1,6 +1,31 @@
 // Netlify Function - Game Create
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
+const { createId } = require('@paralleldrive/cuid2');
+const ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const rateStore = new Map();
+const rateLimit = (key, windowMs, max) => {
+  const now = Date.now();
+  const bucket = rateStore.get(key) || { count: 0, reset: now + windowMs };
+  if (now > bucket.reset) {
+    bucket.count = 0;
+    bucket.reset = now + windowMs;
+  }
+  bucket.count += 1;
+  rateStore.set(key, bucket);
+  return { allowed: bucket.count <= max, remaining: Math.max(0, max - bucket.count), reset: bucket.reset };
+};
+const buildHeaders = (event) => {
+  const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+  const allow = ALLOWED_ORIGINS.length ? (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]) : '*';
+  return {
+    'Access-Control-Allow-Origin': allow,
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+};
 
 // Initialiser Supabase
 const supabase = createClient(
@@ -21,13 +46,7 @@ const verifyToken = (token) => {
 const INITIAL_BOARD_STATE = '4HPwATDgc/ABMA';
 
 exports.handler = async (event, context) => {
-  // CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Content-Type': 'application/json'
-  };
+  const headers = buildHeaders(event);
 
   // Handle preflight OPTIONS
   if (event.httpMethod === 'OPTIONS') {
@@ -47,6 +66,15 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    const ip = (event.headers && (event.headers['x-forwarded-for'] || event.headers['client-ip'])) || 'unknown';
+    const rl = rateLimit(`${ip}:create`, 60 * 1000, 10);
+    if (!rl.allowed) {
+      return {
+        statusCode: 429,
+        headers,
+        body: JSON.stringify({ error: 'Too many requests', retryAfterSeconds: Math.ceil((rl.reset - Date.now())/1000) })
+      };
+    }
     // Vérifier le token
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -98,17 +126,20 @@ exports.handler = async (event, context) => {
 
     // Créer la partie
     const gameData = {
-      whitePlayer: decoded.userId, // Le créateur joue toujours en blanc
-      blackPlayer: gameMode === 'AI_VS_PLAYER' ? null : opponentId,
-      status: 'WAITING',
-      boardState: INITIAL_BOARD_STATE,
-      gameMode,
-      currentPlayer: 'white',
+      id: createId(),
+      white_player_id: decoded.userId,
+      black_player_id: null,
+      status: 'PLAYING',
+      board_state: INITIAL_BOARD_STATE,
+      gameMode: gameMode, // This field stays as gameMode (no @map)
+      current_player: 'WHITE',
       dice: [],
-      whiteScore: 0,
-      blackScore: 0,
+      white_score: 0,
+      black_score: 0,
       createdAt: new Date().toISOString()
     };
+
+    console.log('Creating game with data:', JSON.stringify(gameData, null, 2));
 
     const { data: newGame, error: createError } = await supabase
       .from('games')
@@ -117,27 +148,16 @@ exports.handler = async (event, context) => {
       .single();
 
     if (createError) {
-      console.error('Create game error:', createError);
+      console.error('Create game error:', JSON.stringify(createError, null, 2));
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ error: 'Failed to create game' })
-      };
-    }
-
-    // Si partie vs IA, créer un joueur IA
-    if (gameMode === 'AI_VS_PLAYER') {
-      const { error: aiError } = await supabase
-        .from('games')
-        .update({ 
-          blackPlayer: 'ai-opponent',
-          status: 'PLAYING'
+        body: JSON.stringify({ 
+          error: 'Failed to create game',
+          details: createError.message,
+          code: createError.code
         })
-        .eq('id', newGame.id);
-
-      if (aiError) {
-        console.error('AI setup error:', aiError);
-      }
+      };
     }
 
     // Récupérer les informations des joueurs

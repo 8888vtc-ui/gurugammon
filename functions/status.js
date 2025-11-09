@@ -1,6 +1,30 @@
 // Netlify Function - Game Status
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
+const ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const rateStore = new Map();
+const rateLimit = (key, windowMs, max) => {
+  const now = Date.now();
+  const bucket = rateStore.get(key) || { count: 0, reset: now + windowMs };
+  if (now > bucket.reset) {
+    bucket.count = 0;
+    bucket.reset = now + windowMs;
+  }
+  bucket.count += 1;
+  rateStore.set(key, bucket);
+  return { allowed: bucket.count <= max, remaining: Math.max(0, max - bucket.count), reset: bucket.reset };
+};
+const buildHeaders = (event) => {
+  const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+  const allow = ALLOWED_ORIGINS.length ? (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]) : '*';
+  return {
+    'Access-Control-Allow-Origin': allow,
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+};
 
 // Initialiser Supabase
 const supabase = createClient(
@@ -18,13 +42,7 @@ const verifyToken = (token) => {
 };
 
 exports.handler = async (event, context) => {
-  // CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Content-Type': 'application/json'
-  };
+  const headers = buildHeaders(event);
 
   // Handle preflight OPTIONS
   if (event.httpMethod === 'OPTIONS') {
@@ -44,6 +62,16 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    const ip = (event.headers && (event.headers['x-forwarded-for'] || event.headers['client-ip'])) || 'unknown';
+    const rl = rateLimit(`${ip}:status`, 60 * 1000, 60);
+    if (!rl.allowed) {
+      return {
+        statusCode: 429,
+        headers,
+        body: JSON.stringify({ error: 'Too many requests', retryAfterSeconds: Math.ceil((rl.reset - Date.now())/1000) })
+      };
+    }
+
     // Vérifier le token
     const authHeader = event.headers.authorization || event.headers.Authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -92,9 +120,9 @@ exports.handler = async (event, context) => {
     }
 
     // Vérifier que l'utilisateur est un joueur de la partie
-    if (game.whitePlayer !== decoded.userId && 
-        game.blackPlayer !== decoded.userId && 
-        game.blackPlayer !== 'ai-opponent') {
+    if (game.white_player_id !== decoded.userId && 
+        game.black_player_id !== decoded.userId && 
+        game.black_player_id !== 'ai-opponent') {
       return {
         statusCode: 403,
         headers,
@@ -106,18 +134,18 @@ exports.handler = async (event, context) => {
     const { data: whitePlayerInfo } = await supabase
       .from('users')
       .select('username, elo, avatar')
-      .eq('id', game.whitePlayer)
+      .eq('id', game.white_player_id)
       .single();
 
     let blackPlayerInfo = null;
-    if (game.blackPlayer && game.blackPlayer !== 'ai-opponent') {
+    if (game.black_player_id && game.black_player_id !== 'ai-opponent') {
       const { data: blackData } = await supabase
         .from('users')
         .select('username, elo, avatar')
-        .eq('id', game.blackPlayer)
+        .eq('id', game.black_player_id)
         .single();
       blackPlayerInfo = blackData;
-    } else if (game.blackPlayer === 'ai-opponent') {
+    } else if (game.black_player_id === 'ai-opponent') {
       blackPlayerInfo = {
         username: 'AI Opponent',
         elo: 1800,

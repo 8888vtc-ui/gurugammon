@@ -1,6 +1,30 @@
 // Netlify Function - User Profile
 const jwt = require('jsonwebtoken');
 const { createClient } = require('@supabase/supabase-js');
+const ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
+const rateStore = new Map();
+const rateLimit = (key, windowMs, max) => {
+  const now = Date.now();
+  const bucket = rateStore.get(key) || { count: 0, reset: now + windowMs };
+  if (now > bucket.reset) {
+    bucket.count = 0;
+    bucket.reset = now + windowMs;
+  }
+  bucket.count += 1;
+  rateStore.set(key, bucket);
+  return { allowed: bucket.count <= max, remaining: Math.max(0, max - bucket.count), reset: bucket.reset };
+};
+const buildHeaders = (event) => {
+  const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+  const allow = ALLOWED_ORIGINS.length ? (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]) : '*';
+  return {
+    'Access-Control-Allow-Origin': allow,
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+};
 
 // Initialiser Supabase
 const supabase = createClient(
@@ -18,13 +42,7 @@ const verifyToken = (token) => {
 };
 
 exports.handler = async (event, context) => {
-  // CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, PUT, OPTIONS',
-    'Content-Type': 'application/json'
-  };
+  const headers = buildHeaders(event);
 
   // Handle preflight OPTIONS
   if (event.httpMethod === 'OPTIONS') {
@@ -59,6 +77,15 @@ exports.handler = async (event, context) => {
 
     // GET - Récupérer le profil
     if (event.httpMethod === 'GET') {
+      const ip = (event.headers && (event.headers['x-forwarded-for'] || event.headers['client-ip'])) || 'unknown';
+      const rl = rateLimit(`${ip}:profile:get`, 60 * 1000, 60);
+      if (!rl.allowed) {
+        return {
+          statusCode: 429,
+          headers,
+          body: JSON.stringify({ error: 'Too many requests', retryAfterSeconds: Math.ceil((rl.reset - Date.now())/1000) })
+        };
+      }
       const { data: user, error } = await supabase
         .from('users')
         .select(`
@@ -108,6 +135,15 @@ exports.handler = async (event, context) => {
 
     // PUT - Mettre à jour le profil
     if (event.httpMethod === 'PUT') {
+      const ip = (event.headers && (event.headers['x-forwarded-for'] || event.headers['client-ip'])) || 'unknown';
+      const rl = rateLimit(`${ip}:profile:put`, 60 * 1000, 10);
+      if (!rl.allowed) {
+        return {
+          statusCode: 429,
+          headers,
+          body: JSON.stringify({ error: 'Too many requests', retryAfterSeconds: Math.ceil((rl.reset - Date.now())/1000) })
+        };
+      }
       const { username, avatar } = JSON.parse(event.body);
       const updateData = {};
 
