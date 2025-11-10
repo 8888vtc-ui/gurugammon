@@ -6,7 +6,7 @@
 
 [deploy]
   # Start command - updated for current structure
-  startCommand = "npm run build && npm start"
+  startCommand = "npm start"
   # Health check path
   healthcheckPath = "/health"
   # Health check timeout
