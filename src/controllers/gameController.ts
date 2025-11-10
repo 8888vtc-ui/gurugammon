@@ -65,6 +65,13 @@ export const getGameStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { gameId } = req.params;
 
+    if (!gameId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Game ID is required'
+      });
+    }
+
     const game = await prisma.games.findUnique({
       where: { id: gameId },
       include: {
@@ -129,6 +136,13 @@ export const rollDice = async (req: AuthRequest, res: Response) => {
   try {
     const { gameId } = req.params;
 
+    if (!gameId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Game ID is required'
+      });
+    }
+
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -171,6 +185,13 @@ export const makeMove = async (req: AuthRequest, res: Response) => {
   try {
     const { gameId } = req.params;
     const { from, to }: { from: number; to: number } = req.body;
+
+    if (!gameId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Game ID is required'
+      });
+    }
 
     if (!req.user) {
       return res.status(401).json({
