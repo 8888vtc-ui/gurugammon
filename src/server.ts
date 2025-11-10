@@ -1,5 +1,5 @@
 // src/server.ts
-const express = require('express');
+import express from 'express';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { loggerMiddleware } from './middleware/loggerMiddleware';
@@ -35,7 +35,7 @@ app.use('/api/gnubg', gnubgRouter);
 app.use('/api/gnubg-debug', gnubgDebugRouter);
 
 // Route de santé
-app.get('/health', (req: any, res: any) => {
+app.get('/health', (req: express.Request, res: express.Response) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
@@ -44,7 +44,7 @@ app.get('/health', (req: any, res: any) => {
 });
 
 // Route racine
-app.get('/', (req: any, res: any) => {
+app.get('/', (req: express.Request, res: express.Response) => {
   res.json({
     message: 'GammonGuru API',
     version: '1.0.0',
