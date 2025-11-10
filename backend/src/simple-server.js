@@ -14,7 +14,7 @@ let ErrorHandler, GamePersistenceService, AuthControllerComplete, AuthRoutesComp
 try {
   ErrorHandler = require('./middleware/error.middleware');
   GamePersistenceService = require('./services/game.persistence.service');
-  AuthControllerComplete = require('./controllers/auth.controller.schema');
+  AuthControllerComplete = require('./controllers/auth.controller.final');
   AuthRoutesComplete = require('./routes/auth.routes.complete');
   console.log('✅ Enhanced modules loaded successfully');
 } catch (error) {
@@ -453,14 +453,25 @@ const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   try {
-    // Initialize database connection (with fallback for development)
-    console.log('🔌 Initializing database connection...');
+    // Initialize Game Persistence Service
+    if (GamePersistenceService && GamePersistenceService.initialize) {
+      try {
+        await GamePersistenceService.initialize();
+        console.log('💾 Game persistence service initialized');
+      } catch (error) {
+        console.log('⚠️ Game persistence service initialization failed:', error.message);
+        console.log('🔄 Continuing in memory-only mode...');
+      }
+    }
+
+    // Load ELO Service
+    let EloService;
     try {
-      await GamePersistenceService.initialize();
-      console.log('✅ Database connected successfully');
-    } catch (dbError) {
-      console.warn('⚠️ Database connection failed, running in memory-only mode:', dbError.message);
-      console.log('💾 Database: Memory-only mode (no persistence)');
+      EloService = require('./services/elo.service.final');
+      console.log('🏆 ELO service loaded successfully');
+    } catch (error) {
+      console.log('⚠️ ELO service not available:', error.message);
+      EloService = null;
     }
 
     // Start server

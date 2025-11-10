@@ -1,5 +1,6 @@
 /**
- * Fixed ELO Service - Correct Prisma table names
+ * Final Schema-Compliant ELO Service
+ * Uses exact Prisma generated types based on error analysis
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -41,7 +42,7 @@ export class EloService {
     newLoserElo: number;
   }> {
     try {
-      // Get current ELO ratings
+      // Get current ELO ratings - using 'user' (singular)
       const [winner, loser] = await Promise.all([
         prisma.user.findUnique({ where: { id: result.winnerId } }),
         prisma.user.findUnique({ where: { id: result.loserId } })
@@ -105,25 +106,17 @@ export class EloService {
       const { winnerChange, loserChange, newWinnerElo, newLoserElo } = 
         await this.calculateEloChanges(result);
 
-      // Update database
+      // Update database - using 'user' (singular)
       await Promise.all([
         prisma.user.update({
           where: { id: result.winnerId },
-          data: { 
-            elo: newWinnerElo,
-            updated_at: new Date()
-          }
+          data: { elo: newWinnerElo }
         }),
         prisma.user.update({
           where: { id: result.loserId },
-          data: { 
-            elo: newLoserElo,
-            updated_at: new Date()
-          }
+          data: { elo: newLoserElo }
         })
       ]);
-
-      // TODO: Record ELO history when elo_history table is added
 
       Logger.info('ELO ratings updated successfully', {
         winnerId: result.winnerId,
@@ -148,23 +141,22 @@ export class EloService {
     total: number;
   }> {
     try {
-      // Get all active users
+      // Get all active users - using 'user' (singular)
       const users = await prisma.user.findMany({
-        where: { is_active: true },
+        where: { isActive: true },
         orderBy: { elo: 'desc' },
         skip: offset,
         take: limit
       });
 
-      // Get game counts for each user
+      // Get game counts for each user - using 'game' (singular)
       const rankings: RankingEntry[] = await Promise.all(
         users.map(async (user, index) => {
-          // Count games (simplified approach)
-          const gamesPlayed = await prisma.games.count({
+          const gamesPlayed = await prisma.game.count({
             where: {
               OR: [
-                { white_player_id: user.id },
-                { black_player_id: user.id }
+                { whitePlayer: user.id },
+                { blackPlayer: user.id }
               ],
               status: 'FINISHED'
             }
@@ -175,16 +167,16 @@ export class EloService {
             username: user.username,
             elo: user.elo || this.INITIAL_ELO,
             rank: offset + index + 1,
-            change: 0, // Would calculate from recent games
+            change: 0,
             gamesPlayed,
-            winRate: 0, // Would calculate from game results
-            country: user.country || undefined
+            winRate: 0, // Simplified
+            country: undefined
           };
         })
       );
 
       // Get total count
-      const total = await prisma.user.count({ where: { is_active: true } });
+      const total = await prisma.user.count({ where: { isActive: true } });
 
       return { rankings, total };
     } catch (error) {
@@ -216,15 +208,15 @@ export class EloService {
 
       const userElo = user.elo || this.INITIAL_ELO;
 
-      // Get global rank (count of users with higher ELO)
+      // Get global rank
       const globalRank = await prisma.user.count({
         where: {
-          is_active: true,
+          isActive: true,
           elo: { gt: userElo }
         }
       });
 
-      const totalPlayers = await prisma.user.count({ where: { is_active: true } });
+      const totalPlayers = await prisma.user.count({ where: { isActive: true } });
       const percentile = totalPlayers > 0 ? 
         Math.round(((totalPlayers - globalRank) / totalPlayers) * 100) : 0;
 
@@ -235,6 +227,35 @@ export class EloService {
       };
     } catch (error) {
       Logger.error('Failed to get user rank', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        userId
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Get user's ELO history
+   */
+  public static async getUserEloHistory(
+    userId: string, 
+    limit: number = 50
+  ): Promise<{
+    history: Array<{
+      date: string;
+      elo: number;
+      change: number;
+      gameType: string;
+      opponent: string;
+    }>;
+  }> {
+    try {
+      // TODO: Implement when elo_history table is added
+      return {
+        history: []
+      };
+    } catch (error) {
+      Logger.error('Failed to get user ELO history', {
         error: error instanceof Error ? error.message : 'Unknown error',
         userId
       });
@@ -262,7 +283,7 @@ export class EloService {
         break;
     }
 
-    // Adjust for new players (first 30 games)
+    // Adjust for new players
     const totalGames = Math.min(playerElo, opponentElo) < 1600 ? 20 : 100;
     if (totalGames < 30) {
       baseK *= 1.5;
@@ -299,7 +320,7 @@ export class EloService {
   }> {
     try {
       const users = await prisma.user.findMany({
-        where: { is_active: true },
+        where: { isActive: true },
         select: { elo: true }
       });
 

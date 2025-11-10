@@ -1,5 +1,6 @@
 /**
- * Fixed Authentication Controller - Correct Prisma table names
+ * Final Schema-Compliant Authentication Controller
+ * Uses exact Prisma generated types based on error analysis
  */
 
 import { Request, Response, NextFunction } from 'express';
@@ -45,7 +46,7 @@ export class AuthController {
         throw ErrorHandler.createOperationalError('Password must be at least 8 characters', 400);
       }
 
-      // Check if user already exists
+      // Check if user already exists - using 'user' (singular) based on TypeScript errors
       const existingUser = await prisma.user.findFirst({
         where: {
           OR: [
@@ -63,21 +64,21 @@ export class AuthController {
       // Hash password
       const hashedPassword = await bcrypt.hash(password, this.BCRYPT_ROUNDS);
 
-      // Create user
+      // Create user with exact schema fields
       const user = await prisma.user.create({
         data: {
           id: uuidv4(),
           email: email.toLowerCase(),
           username: username.toLowerCase(),
-          password_hash: hashedPassword,
-          first_name: firstName || null,
-          last_name: lastName || null,
+          password: hashedPassword, // Schema uses 'password'
+          avatar: null,
+          level: 'BEGINNER',
           elo: 1500,
-          subscription_type: 'FREE',
-          is_active: true,
-          email_verified: false,
-          created_at: new Date(),
-          updated_at: new Date()
+          subscriptionType: 'FREE',
+          isActive: true, // Schema uses 'isActive'
+          emailVerified: false,
+          createdAt: new Date(),
+          lastLoginAt: new Date()
         }
       });
 
@@ -85,10 +86,8 @@ export class AuthController {
       const accessToken = this.generateAccessToken(user.id);
       const refreshToken = this.generateRefreshToken(user.id);
 
-      // Store refresh token (using a simple session approach for now)
-      // TODO: Implement proper session table if needed
-
-      const { password_hash, ...userWithoutPassword } = user;
+      // Remove password from response
+      const { password: _, ...userWithoutPassword } = user;
 
       res.status(201).json({
         success: true,
@@ -121,12 +120,12 @@ export class AuthController {
         where: { email: email.toLowerCase() }
       });
 
-      if (!user || !user.is_active) {
+      if (!user || !user.isActive) {
         throw ErrorHandler.createOperationalError('Invalid credentials', 401);
       }
 
       // Verify password
-      const isValidPassword = await bcrypt.compare(password, user.password_hash);
+      const isValidPassword = await bcrypt.compare(password, user.password);
       if (!isValidPassword) {
         throw ErrorHandler.createOperationalError('Invalid credentials', 401);
       }
@@ -138,10 +137,10 @@ export class AuthController {
       // Update last login
       await prisma.user.update({
         where: { id: user.id },
-        data: { last_login: new Date() }
+        data: { lastLoginAt: new Date() }
       });
 
-      const { password_hash, ...userWithoutPassword } = user;
+      const { password: _, ...userWithoutPassword } = user;
 
       res.json({
         success: true,
@@ -175,7 +174,7 @@ export class AuthController {
         where: { id: decoded.userId }
       });
 
-      if (!user || !user.is_active) {
+      if (!user || !user.isActive) {
         throw ErrorHandler.createOperationalError('User not found or inactive', 401);
       }
 
@@ -208,14 +207,6 @@ export class AuthController {
           analyses: {
             orderBy: { createdAt: 'desc' },
             take: 10
-          },
-          games_white_player_idTousers: {
-            orderBy: { createdAt: 'desc' },
-            take: 5
-          },
-          games_black_player_idTousers: {
-            orderBy: { createdAt: 'desc' },
-            take: 5
           }
         }
       });
@@ -224,7 +215,7 @@ export class AuthController {
         throw ErrorHandler.createOperationalError('User not found', 404);
       }
 
-      const { password_hash, ...userWithoutPassword } = user;
+      const { password: _, ...userWithoutPassword } = user;
 
       res.json({
         success: true,
@@ -241,7 +232,7 @@ export class AuthController {
   public static async updateProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const userId = (req as any).user?.id;
-      const { username, firstName, lastName, avatar_url } = req.body;
+      const { username, avatar } = req.body;
 
       if (!userId) {
         throw ErrorHandler.createOperationalError('Authentication required', 401);
@@ -264,14 +255,11 @@ export class AuthController {
         where: { id: userId },
         data: {
           ...(username && { username: username.toLowerCase() }),
-          ...(firstName !== undefined && { first_name: firstName }),
-          ...(lastName !== undefined && { last_name: lastName }),
-          ...(avatar_url !== undefined && { avatar_url }),
-          updated_at: new Date()
+          ...(avatar !== undefined && { avatar })
         }
       });
 
-      const { password_hash, ...userWithoutPassword } = updatedUser;
+      const { password: _, ...userWithoutPassword } = updatedUser;
 
       res.json({
         success: true,
@@ -288,10 +276,6 @@ export class AuthController {
    */
   public static async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { refreshToken } = req.body;
-
-      // TODO: Implement session revocation when session table is added
-
       res.json({
         success: true,
         message: 'Logout successful'
@@ -314,10 +298,7 @@ export class AuthController {
 
       await prisma.user.update({
         where: { id: userId },
-        data: {
-          is_active: false,
-          updated_at: new Date()
-        }
+        data: { isActive: false }
       });
 
       res.json({
@@ -379,26 +360,7 @@ export class AuthController {
     }
   }
 
-  /**
-   * Helper methods
-   */
-  private static generateAccessToken(userId: string): string {
-    return jwt.sign(
-      { userId, type: 'access' },
-      this.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-  }
-
-  private static generateRefreshToken(userId: string): string {
-    return jwt.sign(
-      { userId, type: 'refresh' },
-      this.JWT_REFRESH_SECRET,
-      { expiresIn: '30d' }
-    );
-  }
-
-  // Additional simplified methods for other endpoints...
+  // Simplified implementations for remaining endpoints
   public static async forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     res.json({ success: true, message: 'Password reset functionality coming soon' });
   }
@@ -420,6 +382,67 @@ export class AuthController {
   }
 
   public static async changePassword(req: Request, res: Response, next: NextFunction): Promise<void> {
-    res.json({ success: true, message: 'Password change functionality coming soon' });
+    try {
+      const userId = (req as any).user?.id;
+      const { currentPassword, newPassword } = req.body;
+
+      if (!userId) {
+        throw ErrorHandler.createOperationalError('Authentication required', 401);
+      }
+
+      if (!currentPassword || !newPassword) {
+        throw ErrorHandler.createOperationalError('Current password and new password are required', 400);
+      }
+
+      if (newPassword.length < 8) {
+        throw ErrorHandler.createOperationalError('New password must be at least 8 characters', 400);
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        throw ErrorHandler.createOperationalError('User not found', 404);
+      }
+
+      const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+      if (!isValidPassword) {
+        throw ErrorHandler.createOperationalError('Current password is incorrect', 400);
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, this.BCRYPT_ROUNDS);
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { password: hashedPassword }
+      });
+
+      res.json({
+        success: true,
+        message: 'Password changed successfully'
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Helper methods
+   */
+  private static generateAccessToken(userId: string): string {
+    return jwt.sign(
+      { userId, type: 'access' },
+      this.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+  }
+
+  private static generateRefreshToken(userId: string): string {
+    return jwt.sign(
+      { userId, type: 'refresh' },
+      this.JWT_REFRESH_SECRET,
+      { expiresIn: '30d' }
+    );
   }
 }

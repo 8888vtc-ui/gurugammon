@@ -1,42 +1,26 @@
-// Netlify Function - Auth Register
+/**
+ * Netlify Function - Register (Serverless)
+ * Fast user registration endpoint for global CDN
+ */
+
 const bcrypt = require('bcryptjs');
-const { createClient } = require('@supabase/supabase-js');
-const { createId } = require('@paralleldrive/cuid2');
-const ALLOWED_ORIGINS = (process.env.CORS_ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean);
-const rateStore = new Map();
-const rateLimit = (key, windowMs, max) => {
-  const now = Date.now();
-  const bucket = rateStore.get(key) || { count: 0, reset: now + windowMs };
-  if (now > bucket.reset) {
-    bucket.count = 0;
-    bucket.reset = now + windowMs;
-  }
-  bucket.count += 1;
-  rateStore.set(key, bucket);
-  return { allowed: bucket.count <= max, remaining: Math.max(0, max - bucket.count), reset: bucket.reset };
-};
-const buildHeaders = (event) => {
-  const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
-  const allow = ALLOWED_ORIGINS.length ? (ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]) : '*';
-  return {
-    'Access-Control-Allow-Origin': allow,
-    'Vary': 'Origin',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+const jwt = require('jsonwebtoken');
+const { PrismaClient } = require('@prisma/client');
+const { v4: uuidv4 } = require('uuid');
+
+const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
+
+exports.handler = async (event, context) => {
+  // Set CORS headers
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Content-Type': 'application/json'
   };
-};
 
-// Initialiser Supabase
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
-
-exports.handler = async (event, context) => {
-  const headers = buildHeaders(event);
-
-  // Handle preflight OPTIONS
+  // Handle preflight OPTIONS request
   if (event.httpMethod === 'OPTIONS') {
     return {
       statusCode: 200,
@@ -54,126 +38,49 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const ip = (event.headers && (event.headers['x-forwarded-for'] || event.headers['client-ip'])) || 'unknown';
-    const rl = rateLimit(`${ip}:register`, 60 * 1000, 3);
-    if (!rl.allowed) {
-      return {
-        statusCode: 429,
-        headers,
-        body: JSON.stringify({ error: 'Too many requests', retryAfterSeconds: Math.ceil((rl.reset - Date.now())/1000) })
-      };
-    }
+    const { email, username, password, firstName, lastName } = JSON.parse(event.body);
 
-    const { email, password, username } = JSON.parse(event.body);
-
-    // Validation
-    if (!email || !password || !username) {
+    // Validate input
+    if (!email || !username || !password) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ 
-          error: 'Email, password and username required' 
+        body: JSON.stringify({
+          success: false,
+          error: 'Email, username and password are required'
         })
       };
     }
 
-    // Validation email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (password.length < 8) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Invalid email format' })
-      };
-    }
-
-    // Validation password (min 6 caractères)
-    if (password.length < 6) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ 
-          error: 'Password must be at least 6 characters' 
+        body: JSON.stringify({
+          success: false,
+          error: 'Password must be at least 8 characters'
         })
       };
     }
 
-    // Validation username (min 3 caractères)
-    if (username.length < 3) {
-      return {
-        statusCode: 400,
-        headers,
-        body: JSON.stringify({ 
-          error: 'Username must be at least 3 characters' 
-        })
-      };
-    }
+    // Check if user already exists (using 'user' singular)
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: email.toLowerCase() },
+          { username: username.toLowerCase() }
+        ]
+      }
+    });
 
-    // Vérifier si email déjà utilisé
-    const { data: existingEmail } = await supabase
-      .from('users')
-      .select('email')
-      .eq('email', email)
-      .single();
-
-    if (existingEmail) {
+    if (existingUser) {
+      const field = existingUser.email === email.toLowerCase() ? 'email' : 'username';
       return {
         statusCode: 409,
         headers,
-        body: JSON.stringify({ error: 'Email already registered' })
-      };
-    }
-
-    // Vérifier si username déjà utilisé
-    const { data: existingUsername } = await supabase
-      .from('users')
-      .select('username')
-      .eq('username', username)
-      .single();
-
-    if (existingUsername) {
-      return {
-        statusCode: 409,
-        headers,
-        body: JSON.stringify({ error: 'Username already taken' })
-      };
-    }
-
-    // Hasher le mot de passe
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Données à insérer
-    const userData = {
-      id: createId(),
-      email,
-      password: hashedPassword,
-      username,
-      level: 'BEGINNER',
-      elo: 1500,
-      subscriptionType: 'FREE',
-      isActive: true,
-      emailVerified: false,
-      createdAt: new Date().toISOString(),
-      lastLoginAt: new Date().toISOString()
-    };
-    
-    console.log('Inserting user data:', JSON.stringify(userData, null, 2));
-
-    // Créer le nouvel utilisateur
-    const { data: newUser, error: createError } = await supabase
-      .from('users')
-      .insert(userData)
-      .select()
-      .single();
-
-    if (createError) {
-      console.error('Create user error:', JSON.stringify(createError, null, 2));
-      return {
-        statusCode: 500,
-        headers,
-        body: JSON.stringify({ 
-          error: 'Failed to create user',
-          details: createError.message,
+        body: JSON.stringify({
+          success: false,
+          error: `This ${field} is already registered`
         })
       };
     }
@@ -181,21 +88,21 @@ exports.handler = async (event, context) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user
-    const user = await prisma.users.create({
+    // Create user with schema-compliant fields
+    const user = await prisma.user.create({
       data: {
         id: uuidv4(),
         email: email.toLowerCase(),
         username: username.toLowerCase(),
-        password_hash: hashedPassword,
-        first_name: firstName || null,
-        last_name: lastName || null,
+        password: hashedPassword,
+        avatar: null,
+        level: 'BEGINNER',
         elo: 1500,
-        subscription_type: 'FREE',
-        is_active: true,
-        email_verified: false,
-        created_at: new Date(),
-        updated_at: new Date()
+        subscriptionType: 'FREE',
+        isActive: true,
+        emailVerified: false,
+        createdAt: new Date(),
+        lastLoginAt: new Date()
       }
     });
 
@@ -207,7 +114,7 @@ exports.handler = async (event, context) => {
     );
 
     // Remove password from response
-    const { password_hash, ...userWithoutPassword } = user;
+    const { password: _, ...userWithoutPassword } = user;
 
     return {
       statusCode: 201,
@@ -224,13 +131,13 @@ exports.handler = async (event, context) => {
     };
 
   } catch (error) {
-    console.error('Register error:', error);
+    console.error('Register function error:', error);
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ 
-        error: 'Internal server error',
-        message: error.message 
+      body: JSON.stringify({
+        success: false,
+        error: 'Internal server error'
       })
     };
   }

@@ -76,8 +76,8 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Find user in database (schema uses 'users' table)
-    const user = await prisma.users.findUnique({
+    // Find user in database (using 'user' singular based on TypeScript errors)
+    const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() }
     });
 
