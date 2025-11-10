@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import LoginView from '../views/LoginView.vue'
+import RegisterView from '../views/RegisterView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import AnalyzeView from '../views/AnalyzeView.vue'
 import GameView from '../views/GameView.vue'
@@ -17,6 +18,11 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: LoginView,
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: RegisterView,
     },
     {
       path: '/dashboard',
@@ -73,5 +79,27 @@ const router = createRouter({
     },
   ],
 })
+
+// Route guards for authentication
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = !!localStorage.getItem('authToken');
+
+  // Public routes that don't require authentication
+  const publicRoutes = ['home', 'login', 'register'];
+
+  // If trying to access protected route without authentication
+  if (!publicRoutes.includes(to.name as string) && !isAuthenticated) {
+    next({ name: 'login' });
+    return;
+  }
+
+  // If authenticated user tries to access login/register, redirect to dashboard
+  if ((to.name === 'login' || to.name === 'register') && isAuthenticated) {
+    next({ name: 'dashboard' });
+    return;
+  }
+
+  next();
+});
 
 export default router
