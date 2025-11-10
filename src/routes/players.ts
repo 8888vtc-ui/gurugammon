@@ -8,7 +8,15 @@ const prisma = new PrismaClient();
 // GET /api/players
 router.get('/', async (req, res) => {
   try {
-    const players = await prisma.player.findMany();
+    const players = await prisma.users.findMany({
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        elo: true,
+        level: true
+      }
+    });
     res.json({
       success: true,
       data: players
@@ -21,13 +29,14 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /api/players
+// POST /api/players - DISABLED: Use /api/auth/register instead
+/*
 router.post('/', async (req, res) => {
-  const { name, email } = req.body;
+  const { username, email } = req.body;
   
   try {
-    const newPlayer = await prisma.player.create({
-      data: { name, email }
+    const newPlayer = await prisma.users.create({
+      data: { username, email }
     });
     
     res.status(201).json({
@@ -41,13 +50,15 @@ router.post('/', async (req, res) => {
     });
   }
 });
+*/
 
-// DELETE /api/players/:id
+// DELETE /api/players/:id - DISABLED: Security risk
+/*
 router.delete('/:id', async (req, res) => {
-  const playerId = parseInt(req.params.id);
+  const playerId = req.params.id;
   
   try {
-    const deletedPlayer = await prisma.player.delete({
+    const deletedPlayer = await prisma.users.delete({
       where: { id: playerId }
     });
     
@@ -62,5 +73,6 @@ router.delete('/:id', async (req, res) => {
     });
   }
 });
+*/
 
 export default router;

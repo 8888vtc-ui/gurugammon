@@ -5,14 +5,15 @@
   builder = "NIXPACKS"
 
 [deploy]
-  # Start command
-  startCommand = "cd backend/src && node simple-server.js"
+  # Start command - updated for current structure
+  startCommand = "npm run build && npm start"
   # Health check path
   healthcheckPath = "/health"
   # Health check timeout
   healthcheckTimeout = 100
   # Restart policy
   restartPolicyType = "ON_FAILURE"
+  restartPolicyMaxRetries = 10
 
 [env]
   # Node.js environment
@@ -22,6 +23,21 @@
   
   # JWT Configuration
   JWT_SECRET = "your-super-secret-jwt-key-change-this-in-production"
+  JWT_REFRESH_SECRET = "your-refresh-secret-key-change-this"
+  
+  # Database Configuration
+  SUPABASE_URL = "your-supabase-url"
+  SUPABASE_SERVICE_KEY = "your-supabase-service-key"
+  
+  # Monitoring Configuration
+  SENTRY_DSN = "your-sentry-dsn"
+  
+  # GNUBG Analysis Configuration
+  GNUBG_SERVICE_URL = "https://your-gnubg-service.com"
+  GNUBG_API_KEY = "your-gnubg-api-key"
+  
+  # CORS Configuration
+  FRONTEND_URL = "https://gammon-guru.netlify.app"
   
   # AI API Keys
   ANTHROPIC_API_KEY = "your-claude-api-key-here"

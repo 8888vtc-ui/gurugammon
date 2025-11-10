@@ -33,12 +33,42 @@ const router = createRouter({
             component: GameView,
         },
         {
+            path: '/gnubg',
+            name: 'gnubg',
+            component: () => import('../views/GnubgView.vue'),
+        },
+        {
+            path: '/gurubot',
+            name: 'gurubot',
+            component: () => import('../views/GurubotView.vue'),
+        },
+        {
+            path: '/gurubot-chat',
+            name: 'gurubot-chat',
+            component: () => import('../views/GurubotChatView.vue'),
+        },
+        {
+            path: '/easybot',
+            name: 'easybot',
+            component: () => import('../views/EasyBotView.vue'),
+        },
+        {
             path: '/about',
             name: 'about',
             // route level code-splitting
             // this generates a separate chunk (About.[hash].js) for this route
             // which is lazy-loaded when the route is visited.
             component: () => import('../views/AboutView.vue'),
+        },
+        {
+            path: '/multiplayer',
+            name: 'multiplayer',
+            component: () => import('../views/MultiplayerGameView.vue'),
+        },
+        {
+            path: '/claude-assistant',
+            name: 'claude-assistant',
+            component: () => import('../views/ClaudeAssistantView.vue'),
         },
     ],
 });

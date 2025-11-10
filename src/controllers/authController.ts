@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import { createId } from '@paralleldrive/cuid2';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -21,7 +22,7 @@ export const register = async (req: Request, res: Response) => {
     }
 
     // Vérifier si l'utilisateur existe
-    const existingPlayer = await prisma.player.findUnique({
+    const existingPlayer = await prisma.users.findUnique({
       where: { email }
     });
 
@@ -36,8 +37,13 @@ export const register = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Créer l'utilisateur
-    const player = await prisma.player.create({
-      data: { name, email, password: hashedPassword }
+    const player = await prisma.users.create({
+      data: {
+        id: createId(),
+        username: name,
+        email,
+        password: hashedPassword
+      }
     });
 
     // Générer token
@@ -53,7 +59,7 @@ export const register = async (req: Request, res: Response) => {
         token,
         user: {
           id: player.id,
-          name: player.name,
+          name: player.username,
           email: player.email
         }
       }
@@ -80,7 +86,7 @@ export const login = async (req: Request, res: Response) => {
     }
 
     // Trouver l'utilisateur
-    const player = await prisma.player.findUnique({
+    const player = await prisma.users.findUnique({
       where: { email }
     });
 
@@ -114,7 +120,7 @@ export const login = async (req: Request, res: Response) => {
         token,
         user: {
           id: player.id,
-          name: player.name,
+          name: player.username,
           email: player.email
         }
       }

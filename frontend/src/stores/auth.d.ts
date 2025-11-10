@@ -50,7 +50,7 @@ export declare const useAuthStore: import("pinia").StoreDefinition<"auth", Pick<
     }>;
     loadFromStorage: () => void;
     clearError: () => void;
-}, "error" | "user" | "token" | "isLoading">, Pick<{
+}, "error" | "token" | "user" | "isLoading">, Pick<{
     user: import("vue").Ref<{
         id: string;
         email: string;
@@ -134,5 +134,5 @@ export declare const useAuthStore: import("pinia").StoreDefinition<"auth", Pick<
     }>;
     loadFromStorage: () => void;
     clearError: () => void;
-}, "refreshToken" | "login" | "register" | "logout" | "updateProfile" | "loadFromStorage" | "clearError">>;
+}, "login" | "register" | "logout" | "refreshToken" | "updateProfile" | "loadFromStorage" | "clearError">>;
 //# sourceMappingURL=auth.d.ts.map

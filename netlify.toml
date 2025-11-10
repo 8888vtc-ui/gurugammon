@@ -9,12 +9,29 @@
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; img-src 'self' data: https:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.supabase.co https://*.netlify.app https://*.netlify.com"
-    Referrer-Policy = "strict-origin-when-cross-origin"
-    X-Content-Type-Options = "nosniff"
-    X-Frame-Options = "DENY"
-    X-XSS-Protection = "1; mode=block"
-    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    Content-Security-Policy = "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src * data:; font-src *; style-src * 'unsafe-inline';"
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+    Access-Control-Allow-Headers = "*"
+    Access-Control-Allow-Credentials = "true"
+
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization, X-Requested-With"
+    Access-Control-Allow-Credentials = "true"
+
+[[redirects]]
+  from = "/api/auth/login"
+  to = "/.netlify/functions/login-debug"
+  status = 200
+
+[[redirects]]
+  from = "/api"
+  to = "/.netlify/functions/debug-env"
+  status = 200
 
 [[redirects]]
   from = "/api/*"
@@ -24,11 +41,6 @@
 [[redirects]]
   from = "/debug"
   to = "/.netlify/functions/debug-env"
-  status = 200
-
-[[redirects]]
-  from = "/api/auth/login"
-  to = "/.netlify/functions/login"
   status = 200
 
 [[redirects]]
@@ -55,3 +67,23 @@
   from = "/api/gnubg/analyze"
   to = "/.netlify/functions/analyze"
   status = 200
+
+[[redirects]]
+  from = "/api/tournaments/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/ws/*"
+  to = "/.netlify/functions/websocket:splat"
+  status = 200
+
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/health"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 404

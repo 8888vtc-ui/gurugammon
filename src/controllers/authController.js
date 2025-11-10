@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.logout = exports.login = exports.register = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const cuid2_1 = require("@paralleldrive/cuid2");
 const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -21,7 +22,7 @@ const register = async (req, res) => {
             });
         }
         // Vérifier si l'utilisateur existe
-        const existingPlayer = await prisma.player.findUnique({
+        const existingPlayer = await prisma.users.findUnique({
             where: { email }
         });
         if (existingPlayer) {
@@ -33,8 +34,13 @@ const register = async (req, res) => {
         // Hasher le mot de passe
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
         // Créer l'utilisateur
-        const player = await prisma.player.create({
-            data: { name, email, password: hashedPassword }
+        const player = await prisma.users.create({
+            data: {
+                id: (0, cuid2_1.createId)(),
+                username: name,
+                email,
+                password: hashedPassword
+            }
         });
         // Générer token
         const token = jsonwebtoken_1.default.sign({ userId: player.id, email: player.email }, JWT_SECRET, { expiresIn: '24h' });
@@ -44,7 +50,7 @@ const register = async (req, res) => {
                 token,
                 user: {
                     id: player.id,
-                    name: player.name,
+                    name: player.username,
                     email: player.email
                 }
             }
@@ -70,7 +76,7 @@ const login = async (req, res) => {
             });
         }
         // Trouver l'utilisateur
-        const player = await prisma.player.findUnique({
+        const player = await prisma.users.findUnique({
             where: { email }
         });
         if (!player || !player.password) {
@@ -95,7 +101,7 @@ const login = async (req, res) => {
                 token,
                 user: {
                     id: player.id,
-                    name: player.name,
+                    name: player.username,
                     email: player.email
                 }
             }

@@ -95,45 +95,5 @@ export declare const gameService: {
         };
         error?: string;
     }>;
-    evaluatePosition(boardState: string, player: "white" | "black"): Promise<{
-        success: boolean;
-        data?: {
-            equity: number;
-            winProbability: number;
-        };
-        error?: string;
-    }>;
-    resignGame(gameId: string): Promise<{
-        success: boolean;
-        error?: string;
-    }>;
-    proposeDraw(gameId: string): Promise<{
-        success: boolean;
-        error?: string;
-    }>;
-    respondToDraw(gameId: string, accept: boolean): Promise<{
-        success: boolean;
-        error?: string;
-    }>;
-    getUserGames(limit?: number, offset?: number): Promise<{
-        success: boolean;
-        data?: {
-            games: Game[];
-            total: number;
-        };
-        error?: string;
-    }>;
-    joinGame(gameId: string): Promise<{
-        success: boolean;
-        data?: {
-            game: Game;
-        };
-        error?: string;
-    }>;
-    leaveGame(gameId: string): Promise<{
-        success: boolean;
-        error?: string;
-    }>;
 };
-export default gameService;
 //# sourceMappingURL=game.d.ts.map

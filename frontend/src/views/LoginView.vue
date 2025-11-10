@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { apiClient } from '@/config/api.config.js';
 
 const router = useRouter();
 const email = ref('');
@@ -15,7 +16,7 @@ async function login() {
   successMessage.value = '';
   
   try {
-    console.log('Tentative de connexion avec:', { email: email.value, password: password.value });
+    console.log('Tentative de connexion avec:', { email: email.value });
     
     // MODE TEST TEMPORAIRE : Simulation de connexion réussie
     if (email.value === 'alice@example.com' && password.value === 'password123') {
@@ -34,21 +35,10 @@ async function login() {
       return;
     }
     
-    // Si ce n'est pas les identifiants de test
-    const response = await fetch('http://localhost:3000/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        email: email.value,
-        password: password.value
-      })
-    });
+    // Utiliser apiClient au lieu de fetch hardcoded
+    console.log('Tentative de connexion vers:', apiClient.baseURL);
+    const data = await apiClient.login(email.value, password.value);
     
-    console.log('Response status:', response.status);
-    
-    const data = await response.json();
     console.log('Response data:', data);
     
     if (data.success) {
@@ -59,11 +49,11 @@ async function login() {
         router.push('/dashboard');
       }, 2000);
     } else {
-      error.value = `❌ ${data.error || 'Login failed'} (Status: ${response.status})`;
+      error.value = `❌ ${data.error || 'Login failed'}`;
     }
   } catch (err: any) {
     console.error('Erreur complète:', err);
-    error.value = `❌ Erreur réseau: ${err.message} - Le backend est-il démarré?`;
+    error.value = `❌ Erreur réseau: ${err.message} - Vérifiez que le backend fonctionne`;
   } finally {
     loading.value = false;
   }

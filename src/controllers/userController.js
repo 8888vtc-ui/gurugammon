@@ -13,15 +13,15 @@ const getProfile = async (req, res) => {
             });
         }
         // Récupérer les informations complètes de l'utilisateur
-        const user = await prisma.player.findUnique({
+        const user = await prisma.users.findUnique({
             where: { id: req.user.id },
             select: {
                 id: true,
-                name: true,
+                username: true,
                 email: true,
-                points: true,
+                elo: true,
                 createdAt: true,
-                updatedAt: true
+                lastLoginAt: true
                 // Ne pas inclure le mot de passe
             }
         });
@@ -53,17 +53,17 @@ const updateProfile = async (req, res) => {
                 error: 'User not authenticated'
             });
         }
-        const { name } = req.body;
-        const updatedUser = await prisma.player.update({
+        const { username } = req.body;
+        const updatedUser = await prisma.users.update({
             where: { id: req.user.id },
-            data: { name },
+            data: { username },
             select: {
                 id: true,
-                name: true,
+                username: true,
                 email: true,
-                points: true,
+                elo: true,
                 createdAt: true,
-                updatedAt: true
+                lastLoginAt: true
             }
         });
         res.json({

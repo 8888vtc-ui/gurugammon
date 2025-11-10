@@ -9,9 +9,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 // Interface pour étendre Request
 export interface AuthRequest extends Request {
   user?: {
-    id: number;
+    id: string;
     email: string;
-    name: string;
+    username: string;
   };
 }
 
@@ -35,12 +35,12 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     
     // Récupérer l'utilisateur depuis la base
-    const user = await prisma.player.findUnique({
+    const user = await prisma.users.findUnique({
       where: { id: decoded.userId },
       select: {
         id: true,
         email: true,
-        name: true
+        username: true
       }
     });
 

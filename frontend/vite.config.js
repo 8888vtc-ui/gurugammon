@@ -8,7 +8,7 @@ export default defineConfig({
         vue(),
         vueDevTools(),
     ],
-    base: '/gnubg-backend/', // Important pour GitHub Pages
+    base: '/', // Important pour Netlify (racine du domaine)
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url))
@@ -16,7 +16,44 @@ export default defineConfig({
     },
     build: {
         outDir: 'dist',
-        assetsDir: 'assets'
+        assetsDir: 'assets',
+        sourcemap: true, // Pour debugging production
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    vendor: ['vue', 'vue-router', 'pinia'],
+                    api: ['./src/services/api.service.js', './src/services/websocket.client.js']
+                }
+            }
+        }
+    },
+    server: {
+        port: 5173,
+        proxy: {
+            '/api': {
+                target: 'http://localhost:3000',
+                changeOrigin: true
+            },
+            '/ws': {
+                target: 'ws://localhost:3000',
+                ws: true,
+                changeOrigin: true
+            }
+        }
+    },
+    preview: {
+        port: 4173,
+        proxy: {
+            '/api': {
+                target: 'http://localhost:3000',
+                changeOrigin: true
+            },
+            '/ws': {
+                target: 'ws://localhost:3000',
+                ws: true,
+                changeOrigin: true
+            }
+        }
     }
 });
 //# sourceMappingURL=vite.config.js.map

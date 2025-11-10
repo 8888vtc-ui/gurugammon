@@ -24,12 +24,12 @@ const authMiddleware = async (req, res, next) => {
         // Vérifier le token
         const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
         // Récupérer l'utilisateur depuis la base
-        const user = await prisma.player.findUnique({
+        const user = await prisma.users.findUnique({
             where: { id: decoded.userId },
             select: {
                 id: true,
                 email: true,
-                name: true
+                username: true
             }
         });
         if (!user) {
