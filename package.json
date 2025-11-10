@@ -5,8 +5,8 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "./node_modules/.bin/tsc --project tsconfig.prod.json",
-    "build:prod": "./node_modules/.bin/tsc --noEmit false --skipLibCheck || echo 'TypeScript build completed with warnings'",
+    "build": "npx tsc --project tsconfig.prod.json",
+    "build:prod": "npx tsc --noEmit false --skipLibCheck || echo 'TypeScript build completed with warnings'",
     "build:netlify": "cd frontend && npm run build-only",
     "start": "node dist/server.js",
     "test": "jest",
