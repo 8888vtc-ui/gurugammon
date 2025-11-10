@@ -1,6 +1,6 @@
 // src/services/gameService.ts
 // @ts-nocheck - Désactiver les vérifications strictes pour le service de jeu
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../server';
 import { BackgammonEngine } from './gameEngine';
 import { convertPrismaPlayer } from '../utils/playerUtils';
 import { 

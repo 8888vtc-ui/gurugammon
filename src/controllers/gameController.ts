@@ -3,8 +3,7 @@ import { Request, Response } from 'express';
 import { PrismaClient, GameMode, GameStatus } from '@prisma/client';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { v4 as uuidv4 } from 'uuid';
-
-const prisma = new PrismaClient();
+import { prisma } from '../server';
 
 // Create a new game
 export const createGameController = async (req: AuthRequest, res: Response) => {

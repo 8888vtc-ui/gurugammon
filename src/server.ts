@@ -13,10 +13,12 @@ import gamesRouter from './routes/games';
 import gnubgRouter from './routes/gnubg';
 import gnubgDebugRouter from './routes/gnubgDebug';
 
-const app = express();
+// Initialize Prisma client (shared instance)
+export const prisma = new PrismaClient({
+  log: config.nodeEnv === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
+});
 
-// Initialize Prisma client
-const prisma = new PrismaClient();
+const app = express();
 
 // Middleware de base
 app.use(express.json());
@@ -96,9 +98,30 @@ app.get('/', (req: express.Request, res: express.Response) => {
 app.use(errorHandlerMiddleware);
 
 // Démarrage du serveur
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   logger.info(`Server running on port ${config.port}`);
   logger.info(`Environment: ${config.nodeEnv}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  server.close(async () => {
+    logger.info('HTTP server closed');
+    await prisma.$disconnect();
+    logger.info('Database connection closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', async () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  server.close(async () => {
+    logger.info('HTTP server closed');
+    await prisma.$disconnect();
+    logger.info('Database connection closed');
+    process.exit(0);
+  });
 });
 
 export default app;

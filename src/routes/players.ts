@@ -1,9 +1,8 @@
 // src/routes/players.ts
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../server';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // GET /api/players
 router.get('/', async (req, res) => {
