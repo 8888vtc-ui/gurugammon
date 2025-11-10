@@ -26,6 +26,17 @@ class ApiService {
   private isDev: boolean;
   private baseUrl: string;
   private token: string | null;
+  private apiKeys: {
+    claude: null;
+    openai: null;
+    replicate: null;
+  };
+  private features: {
+    claude: boolean;
+    openai: boolean;
+    imageGeneration: boolean;
+    websocket: boolean;
+  };
 
   constructor() {
     // Determine base URL based on environment
@@ -56,9 +67,9 @@ class ApiService {
   /**
    * Generic API request method
    */
-  async request(endpoint, options = {}) {
+  async request(endpoint: string, options: RequestInit = {}): Promise<ApiResponse> {
     const url = `${this.baseUrl}${endpoint}`;
-    const config = {
+    const config: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers
@@ -68,7 +79,7 @@ class ApiService {
 
     // Add JWT token if available
     if (this.token) {
-      config.headers['Authorization'] = `Bearer ${this.token}`;
+      (config.headers as Record<string, string>)['Authorization'] = `Bearer ${this.token}`;
     }
 
     try {
@@ -301,7 +312,8 @@ class ApiService {
       console.error('Backend health check failed:', error);
     }
 
-    // Additional checks for AI services...
+    // Note: AI service checks would require backend endpoints that don't exist yet
+    // These would need to be implemented in the backend first
 
     return status;
   }
