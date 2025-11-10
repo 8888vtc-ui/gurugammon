@@ -24,7 +24,22 @@ app.use(express.urlencoded({ extended: true }));
 
 // Middleware de sécurité
 app.use(helmet());
+
+// CORS bypass for health check (Railway internal requests)
+app.use('/health', (req, res, next) => {
+  // Skip CORS for health endpoint
+  next();
+});
+
+// Apply CORS to all other routes
 app.use(cors(corsOptions));
+
+// Rate limiting bypass for health check
+app.use('/health', (req, res, next) => {
+  // Skip rate limiting for health endpoint
+  next();
+});
+
 app.use(generalLimiter);
 
 // Middleware personnalisé
