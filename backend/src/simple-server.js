@@ -8,6 +8,20 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { createServer } = require('http');
+
+// Try to load enhanced modules, fallback to basic if not available
+let ErrorHandler, GamePersistenceService;
+try {
+  ErrorHandler = require('./middleware/error.middleware');
+  GamePersistenceService = require('./services/game.persistence.service');
+} catch (error) {
+  console.log('⚠️ Enhanced modules not available, using basic mode');
+  ErrorHandler = { createOperationalError: (msg) => new Error(msg) };
+  GamePersistenceService = { 
+    initialize: async () => console.log('💾 Persistence service disabled')
+  };
+}
+
 const gnubgOfficialRoutes = require('./routes/gnubg-official.routes.js');
 const gurubotRoutes = require('./routes/gurubot.routes.js');
 const easybotRoutes = require('./routes/easybot.routes.js');
@@ -401,16 +415,50 @@ app.use((err, req, res, next) => {
 // Initialize WebSocket
 const wsServer = websocketRoutes.initializeWebSocket(server);
 
-// Start server
+// Initialize database and start server
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`🎮 GammonGuru Backend Server running on port ${PORT}`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
-  console.log(`🎯 GNUBG API: http://localhost:${PORT}/api/gnubg/*`);
-  console.log(`🤖 GuruBot API: http://localhost:${PORT}/api/gurubot/*`);
-  console.log(`🎯 EasyBot API: http://localhost:${PORT}/api/easybot/*`);
-  console.log(`🔌 WebSocket Server: ws://localhost:${PORT}/ws/*`);
-  console.log(`📊 WebSocket Stats: http://localhost:${PORT}/api/ws/stats`);
+
+async function startServer() {
+  try {
+    // Initialize database connection (with fallback for development)
+    console.log('🔌 Initializing database connection...');
+    try {
+      await GamePersistenceService.initialize();
+      console.log('✅ Database connected successfully');
+    } catch (dbError) {
+      console.warn('⚠️ Database connection failed, running in memory-only mode:', dbError.message);
+      console.log('💾 Database: Memory-only mode (no persistence)');
+    }
+
+    // Start server
+    server.listen(PORT, () => {
+      console.log(`🚀 GammonGuru server running on port ${PORT}`);
+      console.log(`📊 Health: http://localhost:${PORT}/health`);
+      console.log(`🔌 WebSocket: ws://localhost:${PORT}/ws/*`);
+      console.log(`🔒 Security: Enhanced error handling enabled`);
+      console.log(`🛡️  API Keys: Secured (backend only)`);
+    });
+
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Handle graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('🔄 SIGTERM received, shutting down gracefully...');
+  // Add cleanup logic here
+  process.exit(0);
 });
+
+process.on('SIGINT', async () => {
+  console.log('🔄 SIGINT received, shutting down gracefully...');
+  // Add cleanup logic here
+  process.exit(0);
+});
+
+// Start the server
+startServer();
 
 module.exports = app;

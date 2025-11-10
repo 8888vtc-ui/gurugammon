@@ -11,11 +11,11 @@ class ApiService {
       (import.meta.env.VITE_DEV_API_BASE_URL || 'http://localhost:3000') : 
       (import.meta.env.VITE_API_BASE_URL || 'https://your-backend-url.railway.app');
     
-    // API Keys from environment
+    // API Keys - SECURE: Only backend should have access
     this.apiKeys = {
-      claude: import.meta.env.VITE_CLAUDE_API_KEY,
-      openai: import.meta.env.VITE_OPENAI_API_KEY,
-      replicate: import.meta.env.VITE_REPLICATE_API_TOKEN
+      claude: null, // Removed for security - use backend proxy
+      openai: null, // Removed for security - use backend proxy
+      replicate: null // Removed for security - use backend proxy
     };
     
     // Feature flags
@@ -86,10 +86,10 @@ class ApiService {
   }
 
   /**
-   * Claude AI API calls
+   * Claude AI API calls - SECURE: Backend proxy only
    */
   async askClaude(message, context = {}) {
-    if (!this.features.claude || !this.apiKeys.claude) {
+    if (!this.features.claude) {
       throw new Error('Claude AI is not available');
     }
 
@@ -97,8 +97,8 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({
         message,
-        context,
-        apiKey: this.apiKeys.claude
+        context
+        // API key managed by backend for security
       })
     });
   }
@@ -111,8 +111,8 @@ class ApiService {
     return this.request('/api/claude/analyze-game', {
       method: 'POST',
       body: JSON.stringify({
-        ...gameData,
-        apiKey: this.apiKeys.claude
+        ...gameData
+        // API key managed by backend for security
       })
     });
   }
@@ -127,17 +127,17 @@ class ApiService {
       body: JSON.stringify({
         position,
         dice,
-        playerColor,
-        apiKey: this.apiKeys.claude
+        playerColor
+        // API key managed by backend for security
       })
     });
   }
 
   /**
-   * OpenAI API calls
+   * OpenAI API calls - SECURE: Backend proxy only
    */
   async askOpenAI(message, context = {}) {
-    if (!this.features.openai || !this.apiKeys.openai) {
+    if (!this.features.openai) {
       throw new Error('OpenAI is not available');
     }
 
@@ -145,17 +145,17 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({
         message,
-        context,
-        apiKey: this.apiKeys.openai
+        context
+        // API key managed by backend for security
       })
     });
   }
 
   /**
-   * Image generation with Replicate
+   * Image generation with Replicate - SECURE: Backend proxy only
    */
   async generateImage(prompt, style = 'backgammon') {
-    if (!this.features.imageGeneration || !this.apiKeys.replicate) {
+    if (!this.features.imageGeneration) {
       throw new Error('Image generation is not available');
     }
 
@@ -163,8 +163,8 @@ class ApiService {
       method: 'POST',
       body: JSON.stringify({
         prompt,
-        style,
-        apiKey: this.apiKeys.replicate
+        style
+        // API key managed by backend for security
       })
     });
   }

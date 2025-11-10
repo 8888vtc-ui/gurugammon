@@ -77,8 +77,17 @@ const startDrag = (event: MouseEvent | TouchEvent) => {
   event.preventDefault()
   isDragging.value = true
   
-  const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX
-  const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY
+  let clientX: number
+  let clientY: number
+  
+  if ('touches' in event && event.touches.length > 0 && event.touches[0]) {
+    clientX = event.touches[0].clientX
+    clientY = event.touches[0].clientY
+  } else {
+    const mouseEvent = event as MouseEvent
+    clientX = mouseEvent.clientX
+    clientY = mouseEvent.clientY
+  }
   
   dragOffset.value = {
     x: clientX - props.x,
@@ -97,8 +106,17 @@ const startDrag = (event: MouseEvent | TouchEvent) => {
 const handleDrag = (event: MouseEvent | TouchEvent) => {
   if (!isDragging.value) return
   
-  const clientX = 'touches' in event ? event.touches[0].clientX : event.clientX
-  const clientY = 'touches' in event ? event.touches[0].clientY : event.clientY
+  let clientX: number
+  let clientY: number
+  
+  if ('touches' in event && event.touches.length > 0 && event.touches[0]) {
+    clientX = event.touches[0].clientX
+    clientY = event.touches[0].clientY
+  } else {
+    const mouseEvent = event as MouseEvent
+    clientX = mouseEvent.clientX
+    clientY = mouseEvent.clientY
+  }
   
   const newX = clientX - dragOffset.value.x
   const newY = clientY - dragOffset.value.y
