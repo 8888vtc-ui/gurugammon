@@ -1,5 +1,6 @@
 // src/server.ts
 import express from 'express';
+import { PrismaClient } from '@prisma/client';
 import { config } from './config';
 import { logger } from './utils/logger';
 import { loggerMiddleware } from './middleware/loggerMiddleware';
@@ -13,6 +14,9 @@ import gnubgRouter from './routes/gnubg';
 import gnubgDebugRouter from './routes/gnubgDebug';
 
 const app = express();
+
+// Initialize Prisma client
+const prisma = new PrismaClient();
 
 // Middleware de base
 app.use(express.json());
@@ -34,13 +38,30 @@ app.use('/api/games', gamesRouter);
 app.use('/api/gnubg', gnubgRouter);
 app.use('/api/gnubg-debug', gnubgDebugRouter);
 
-// Route de santé
-app.get('/health', (req: express.Request, res: express.Response) => {
-  res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
+// Health check endpoint with database connectivity test
+app.get('/health', async (req: express.Request, res: express.Response) => {
+  try {
+    // Test database connectivity with a simple query
+    await prisma.users.count();
+
+    res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'connected',
+      environment: config.nodeEnv
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      database: 'disconnected',
+      environment: config.nodeEnv,
+      error: 'Database connection failed'
+    });
+  }
 });
 
 // Route racine
