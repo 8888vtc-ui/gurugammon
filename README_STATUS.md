@@ -25,8 +25,7 @@ PROCHAINE ACTION : Implémenter 8 endpoints jeux manquants
 | ⚡ **Netlify Functions** | 6 functions | ⚠️ **2/6** | -4 | 🔧 **MANQUE 4** |
 | 🌐 **WebSocket** | 4 routes | ⚠️ **2/4** | -2 | 🔧 **MANQUE 2** |
 | 🏆 **Système ELO** | Complet | ✅ **100%** | 0 | ✅ **TERMINÉ** |
-| 💰 **Stripe Payments** | 8 endpoints | ❌ **0/8** | -8 | 🔧 **MANQUE 8** |
-| 🏆 **Tournois** | 6 endpoints | ❌ **0/6** | -6 | 🔧 **MANQUE 6** |
+| 🏆 Compétitions | 6 endpoints | ❌ 0/6 | -6 | 🔧 MANQUE 6 (tournois gratuits, pas d'argent réel) |
 | 📊 **Monitoring** | Sentry + Winston | ❌ **0%** | -100% | 🔧 **MANQUE TOUT** |
 | 📈 **Analytics** | Dashboard complet | ❌ **0%** | -100% | 🔧 **MANQUE TOUT** |
 

@@ -232,15 +232,13 @@ WS     /ws/notifications           # Notifications user
 - **Sessions multiples** : Gestion appareils
 
 ### 🏆 **Compétitions**
-- **Tournois** : Entry fees $1-10, prize pools
+- **Tournois gratuits et ouverts à tous, sans aucune mise ni récompense financière. Conforme à la législation française.**
 - **Classements** : Global + par pays + ELO
 - **Saisons** : Compétitions mensuelles
 - **Récompenses** : Badges + trophées + premium
 
 ### 💰 **Monétisation**
 - **Abonnements Stripe** : Free/Premium/VIP
-- **Tournois payants** : 10% commission
-- **Boutique virtuelle** : Skins plateau $2-5
 - **Analytics tracking** : Conversion ELO
 
 ---

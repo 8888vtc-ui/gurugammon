@@ -133,19 +133,9 @@ PREMIUM   - $9/mois   - Analyses illimitées - Skins basic
 VIP       - $19/mois  - Tout illimité - Skins premium - Tournois VIP
 ```
 
-### **Tournois Payants**
-```
-Entry fees $1-10        - 10% commission platform
-Prize pools $50-500     - Distribution automatique
-Special events          - $100-1000 prizes
-```
+### **Tournois**
+Tournois gratuits et ouverts à tous, sans aucune mise ni récompense financière. Conforme à la législation française.
 
-### **Boutique Virtuelle**
-```
-Skins plateau $2-5      - Thèmes personnalisés
-Avatars $1-3            - Profils uniques
-Animations $3-7         - Effets spéciaux
-```
 
 ### **Analytics Tracking**
 ```

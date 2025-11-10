@@ -14,6 +14,9 @@
 - **Routing**: Vue Router
 - **Build Tool**: Vite
 
+### 🏆 Compétitions
+- **Tournois**: Gratuits et ouverts à tous, sans aucune mise ni récompense financière. Conforme à la législation française.
+
 ### 🔧 Backend Netlify Functions
 - **Serverless**: Auto-scaling mondial
 - **API REST**: 7 endpoints sécurisés
