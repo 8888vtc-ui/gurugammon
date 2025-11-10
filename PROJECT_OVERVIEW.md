@@ -82,7 +82,20 @@ Rejoignez la communauté et améliorez votre jeu dans un environnement moderne, 
 
 ---
 
-## 💡 **Modèle d'accès et d'abonnement**
+## 💡 **Modèle d'accès, d'abonnement et système de points**
+
+### Système de points
+- **Comptes Free** : 500 points offerts chaque jour (renouvellement automatique toutes les 24h)
+- **Comptes Abonnés** : Points illimités
+- **Utilisation des points** :
+  - Accès aux tournois gratuits
+  - Accès aux money games (parties à enjeu de points)
+  - Accès aux matchs jusqu'à 11 points
+  - Participation à toutes les fonctionnalités du jeu
+- **Matchs** : coût minimum 100 points par partie
+- **Money Games** : coût défini par la table/partie
+- **Les points ne sont pas achetables, ils servent uniquement à jouer et participer.
+
 
 ### Offres disponibles
 | Offre        | Prix      | Accès Game Analyzer | Accès Claude | Chat | Quiz | Tournois | Statistiques |
