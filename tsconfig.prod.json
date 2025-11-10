@@ -3,12 +3,13 @@
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
-    "module": "commonjs",
+    "module": "ES2022",
     "target": "es2020",
     "types": ["node"],
     "skipLibCheck": true,
     "strict": false,
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "moduleResolution": "node"
   },
   "include": [
     "src/**/*"

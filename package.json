@@ -2,6 +2,7 @@
   "name": "gammon-guru-backend",
   "version": "1.0.0",
   "description": "Backend API for GammonGuru - Advanced Backgammon Game with GNUBG Analysis",
+  "type": "module",
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
