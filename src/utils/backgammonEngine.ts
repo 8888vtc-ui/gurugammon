@@ -145,7 +145,8 @@ export class BackgammonEngine {
     // Check for game completion
     if (this.isGameComplete(newState)) {
       newState.status = 'COMPLETED';
-      newState.winner = this.getWinner(newState);
+      const winner = this.getWinner(newState);
+      newState.winner = winner || undefined;
       if (newState.winner === 'WHITE') {
         newState.whiteScore++;
       } else {
