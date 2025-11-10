@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { createId } from '@paralleldrive/cuid2';
+import { v4 as uuidv4 } from 'uuid';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -39,7 +39,7 @@ export const register = async (req: Request, res: Response) => {
     // Créer l'utilisateur
     const player = await prisma.users.create({
       data: {
-        id: createId(),
+        id: uuidv4(),
         username: name,
         email,
         password: hashedPassword

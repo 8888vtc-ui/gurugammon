@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient, GameMode, GameStatus } from '@prisma/client';
 import { AuthRequest } from '../middleware/authMiddleware';
-import { createId } from '@paralleldrive/cuid2';
+import { v4 as uuidv4 } from 'uuid';
 
 const prisma = new PrismaClient();
 
@@ -21,7 +21,7 @@ export const createGameController = async (req: AuthRequest, res: Response) => {
     // Create game with user as white player (for AI vs Player mode)
     const game = await prisma.games.create({
       data: {
-        id: createId(),
+        id: uuidv4(),
         white_player_id: req.user.id,
         gameMode: gameMode || GameMode.AI_VS_PLAYER,
         status: GameStatus.WAITING,
@@ -217,7 +217,7 @@ export const makeMove = async (req: AuthRequest, res: Response) => {
     // Record the move
     await prisma.game_moves.create({
       data: {
-        id: createId(),
+        id: uuidv4(),
         game_id: gameId,
         user_id: req.user.id,
         player: game.current_player,

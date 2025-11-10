@@ -1,16 +1,16 @@
 // src/server.ts
 import express from 'express';
-import { config } from './config/index.js';
-import { logger } from './utils/logger.js';
-import { loggerMiddleware } from './middleware/loggerMiddleware.js';
-import { errorHandlerMiddleware } from './middleware/errorHandlerMiddleware.js';
-import { helmet, cors, corsOptions, generalLimiter, authLimiter, validateInput } from './middleware/securityMiddleware.js';
-import playersRouter from './routes/players.js';
-import authRouter from './routes/auth.js';
-import userRouter from './routes/user.js';
-import gamesRouter from './routes/games.js';
-import gnubgRouter from './routes/gnubg.js';
-import gnubgDebugRouter from './routes/gnubgDebug.js';
+import { config } from './config';
+import { logger } from './utils/logger';
+import { loggerMiddleware } from './middleware/loggerMiddleware';
+import { errorHandlerMiddleware } from './middleware/errorHandlerMiddleware';
+import { helmet, cors, corsOptions, generalLimiter, authLimiter, validateInput } from './middleware/securityMiddleware';
+import playersRouter from './routes/players';
+import authRouter from './routes/auth';
+import userRouter from './routes/user';
+import gamesRouter from './routes/games';
+import gnubgRouter from './routes/gnubg';
+import gnubgDebugRouter from './routes/gnubgDebug';
 
 const app = express();
 
