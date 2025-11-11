@@ -153,28 +153,44 @@ model user_analytics {
   @@unique([user_id, date])
 }
 
+model game_analyses {
+  id               String   @id @default(cuid())
+  user_id          String
+  game_id          String
+  analysis_report  Json
+  ai_services_used String[]
+  created_at       DateTime @default(now())
+  users            users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, game_id])
+}
+
 model users {
   id                                 String                    @id
   email                              String                    @unique
   password                           String
-  username                           String                    @unique
-  avatar                             String?
-  level                              Level                     @default(BEGINNER)
-  elo                                Int                       @default(1500)
-  subscriptionType                   SubscriptionType          @default(FREE)
-  isActive                           Boolean                   @default(true)
-  emailVerified                      Boolean                   @default(false)
-  createdAt                          DateTime                  @default(now())
-  lastLoginAt                        DateTime                  @default(now())
-  analyses                           analyses[]
-  chat_messages                      chat_messages[]
-  game_moves                         game_moves[]
+  username                           String?                   @unique
+  first_name                         String?
+  last_name                          String?
+  avatar_url                         String?
+  elo_rating                         Int                       @default(1500)
+  games_played                       Int                       @default(0)
+  games_won                          Int                       @default(0)
+  win_rate                           Float                     @default(0)
+  current_streak                     Int                       @default(0)
+  best_streak                        Int                       @default(0)
+  subscription_type                  subscription_type         @default(FREE)
+  subscription_expires_at            DateTime?
+  created_at                         DateTime                  @default(now())
+  updated_at                         DateTime                  @updatedAt
+  user_analytics                     user_analytics[]
+  game_analyses                      game_analyses[]
+  game_histories                     game_histories[]
   games_games_black_player_idTousers games[]                   @relation("games_black_player_idTousers")
   games_games_white_player_idTousers games[]                   @relation("games_white_player_idTousers")
   subscriptions                      subscriptions?
   tournament_participants            tournament_participants[]
   tournaments                        tournaments[]
-  user_analytics                     user_analytics[]
   websocket_connections              websocket_connections[]
 }
 

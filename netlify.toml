@@ -13,6 +13,11 @@
   to = "/.netlify/functions/claude-mistakes"
   status = 200
 
+[[redirects]]
+  from = "/api/analysis/complete-game"
+  to = "/.netlify/functions/game-analysis-report"
+  status = 200
+
 [build.environment]
   NODE_VERSION = "18"
 
