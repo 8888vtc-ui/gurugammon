@@ -17,6 +17,13 @@ export const makeAIMove = async (req: AuthRequest, res: Response) => {
     }
 
     const { gameId } = req.params;
+    if (!gameId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Game ID is required'
+      });
+    }
+
     const { difficulty = 'MEDIUM' } = req.body;
 
     const game = await prisma.games.findFirst({
@@ -55,19 +62,19 @@ export const makeAIMove = async (req: AuthRequest, res: Response) => {
     }
 
     // Convert database game to GameState
-    const gameState = {
+    const gameState: any = {
       id: game.id,
       whitePlayer: game.white_player_id ? { id: game.white_player_id } : null,
       blackPlayer: game.black_player_id ? { id: game.black_player_id } : null,
-      boardState: game.board_state as number[],
+      boardState: Array.isArray(game.board_state) ? game.board_state : JSON.parse(game.board_state || '[]'),
       currentPlayer: game.current_player,
-      dice: game.dice as number[],
+      dice: Array.isArray(game.dice) ? game.dice : JSON.parse(game.dice || '[]'),
       usedDice: [],
       whiteScore: game.white_score,
       blackScore: game.black_score,
       status: game.status,
       gameMode: game.game_mode,
-      winner: game.winner,
+      winner: game.winner || undefined,
       createdAt: game.created_at,
       updatedAt: game.updated_at
     };
@@ -87,7 +94,7 @@ export const makeAIMove = async (req: AuthRequest, res: Response) => {
 
     // Execute the move (simplified logic)
     const diceValue = Math.abs(aiMove.to - aiMove.from);
-    const hasDice = game.dice.includes(diceValue);
+    const hasDice = gameState.dice.includes(diceValue);
 
     if (!hasDice) {
       return res.status(400).json({
@@ -97,10 +104,11 @@ export const makeAIMove = async (req: AuthRequest, res: Response) => {
     }
 
     // Update game state
+    const updatedDice = gameState.dice.filter((d: number) => d !== diceValue);
     await prisma.games.update({
       where: { id: gameId },
       data: {
-        dice: game.dice.filter(d => d !== diceValue),
+        dice: updatedDice,
         current_player: game.current_player === 'WHITE' ? 'BLACK' : 'WHITE',
         updated_at: new Date()
       }
@@ -142,6 +150,12 @@ export const getAIMoveSuggestion = async (req: AuthRequest, res: Response) => {
     }
 
     const { gameId } = req.params;
+    if (!gameId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Game ID is required'
+      });
+    }
 
     const game = await prisma.games.findFirst({
       where: {

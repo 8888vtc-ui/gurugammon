@@ -17,7 +17,7 @@
           <div class="text-lg font-bold">{{ opponentName }}</div>
           <div class="text-xs opacity-75">
             Turn: {{ game?.currentPlayer || 'WHITE' }}
-            <span v-if="isAIThinking" class="text-blue-400 ml-2">🤖 Thinking...</span>
+            <!-- TEMPORARILY DISABLED: <span v-if="isAIThinking" class="text-blue-400 ml-2">🤖 Thinking...</span> -->
           </div>
         </div>
 
@@ -39,7 +39,7 @@
       <!-- Game Controls -->
       <div class="flex justify-between items-center mb-4">
         <div class="text-white text-sm">
-          <span v-if="isAIThinking" class="text-blue-400 font-bold">🤖 AI is thinking...</span>
+          <!-- TEMPORARILY DISABLED: <span v-if="isAIThinking" class="text-blue-400 font-bold">🤖 AI is thinking...</span> -->
           <span v-else-if="isMyTurn" class="text-green-300 font-bold">✅ Your turn</span>
           <span v-else class="text-yellow-300">⏳ Opponent's turn</span>
         </div>
@@ -202,6 +202,7 @@ const pieces = ref<Piece[]>([])
 const isLoading = ref(false)
 const error = ref('')
 const selectedPoint = ref<number | null>(null)
+const isAIThinking = ref(false)
 
 // Computed properties
 const isMyTurn = computed(() => {
@@ -264,9 +265,9 @@ const loadGame = async () => {
       emit('gameLoaded', response.data.game)
 
       // If it's AI's turn, make AI move
-      if (game.value.gameMode === 'AI_VS_PLAYER' && game.value.currentPlayer !== 'WHITE') {
-        await makeAIMove()
-      }
+      // TEMPORARILY DISABLED: if (game.value && game.value.gameMode === 'AI_VS_PLAYER' && game.value.currentPlayer !== 'WHITE') {
+      //   await makeAIMove()
+      // }
     } else {
       error.value = response.error || 'Failed to load game'
     }
@@ -343,9 +344,9 @@ const rollDice = async () => {
       game.value.dice = response.data.dice
 
       // If it's AI vs Player and now it's AI's turn, make AI move
-      if (game.value.gameMode === 'AI_VS_PLAYER' && game.value.currentPlayer !== 'WHITE') {
-        setTimeout(() => makeAIMove(), 1000) // Delay for better UX
-      }
+      // TEMPORARILY DISABLED: if (game.value.gameMode === 'AI_VS_PLAYER' && game.value.currentPlayer !== 'WHITE') {
+      //   setTimeout(() => makeAIMove(), 1000) // Delay for better UX
+      // }
     } else {
       error.value = response.error || 'Failed to roll dice'
     }

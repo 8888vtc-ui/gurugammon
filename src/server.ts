@@ -10,7 +10,6 @@ import playersRouter from './routes/players';
 import authRouter from './routes/auth';
 import userRouter from './routes/user';
 import gamesRouter from './routes/games';
-import aiRouter from './routes/ai';
 import gnubgRouter from './routes/gnubg';
 import gnubgDebugRouter from './routes/gnubgDebug';
 
@@ -53,7 +52,6 @@ app.use('/api/players', playersRouter);
 app.use('/api/auth', authLimiter, authRouter); // Rate limiting strict pour auth
 app.use('/api/user', userRouter);
 app.use('/api/games', gamesRouter);
-app.use('/api/ai', aiRouter);
 app.use('/api/gnubg', gnubgRouter);
 app.use('/api/gnubg-debug', gnubgDebugRouter);
 

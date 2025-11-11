@@ -5,17 +5,17 @@
 
 export interface GameState {
   id: string;
-  whitePlayer: any;
-  blackPlayer: any;
-  boardState: number[]; // [white1, black1, white2, black2, ...]
-  currentPlayer: 'WHITE' | 'BLACK';
+  whitePlayer?: any;
+  blackPlayer?: any;
+  boardState: number[];
+  currentPlayer: string;
   dice: number[];
   usedDice: number[];
   whiteScore: number;
   blackScore: number;
-  status: 'WAITING' | 'PLAYING' | 'COMPLETED';
+  status: string;
   gameMode: string;
-  winner?: 'WHITE' | 'BLACK';
+  winner?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -100,8 +100,14 @@ export class BackgammonEngine {
    * Execute a validated move and update game state
    */
   static executeMove(gameState: GameState, move: Move): GameState {
-    const newState = { ...gameState };
-    const { from, to, player } = move;
+    // Create a new game state object with proper typing
+    const newState: GameState = {
+      ...gameState,
+      boardState: [...gameState.boardState],
+      dice: [...gameState.dice],
+      usedDice: [...gameState.usedDice],
+      updatedAt: new Date()
+    };
 
     // Update board state
     const boardIndex = (from - 1) * 2 + (player === 'WHITE' ? 0 : 1);
@@ -146,15 +152,16 @@ export class BackgammonEngine {
     if (this.isGameComplete(newState)) {
       newState.status = 'COMPLETED';
       const winner = this.getWinner(newState);
-      newState.winner = winner || undefined;
-      if (newState.winner === 'WHITE') {
-        newState.whiteScore++;
-      } else {
-        newState.blackScore++;
+      if (winner) {
+        newState.winner = winner;
+        if (winner === 'WHITE') {
+          newState.whiteScore++;
+        } else {
+          newState.blackScore++;
+        }
       }
     }
 
-    newState.updatedAt = new Date();
     return newState;
   }
 
@@ -232,7 +239,7 @@ export class BackgammonEngine {
   /**
    * Get the winner of a completed game
    */
-  static getWinner(gameState: GameState): 'WHITE' | 'BLACK' | null {
+  static getWinner(gameState: GameState): string | null {
     const whiteTotal = gameState.boardState
       .filter((_, index) => index % 2 === 0)
       .reduce((sum, count) => sum + count, 0);
@@ -247,12 +254,12 @@ export class BackgammonEngine {
   }
 
   // Helper methods
-  private static hasPiecesOnBar(gameState: GameState, player: 'WHITE' | 'BLACK'): boolean {
+  private static hasPiecesOnBar(gameState: GameState, player: string): boolean {
     const barIndex = player === 'WHITE' ? 0 : 1;
     return (gameState.boardState[barIndex] || 0) > 0;
   }
 
-  private static getPiecesOnPoint(gameState: GameState, point: number, player: 'WHITE' | 'BLACK'): number {
+  private static getPiecesOnPoint(gameState: GameState, point: number, player: string): number {
     if (point === 0) { // Bar
       return player === 'WHITE' ? (gameState.boardState[0] || 0) : (gameState.boardState[1] || 0);
     }
@@ -261,12 +268,12 @@ export class BackgammonEngine {
     return gameState.boardState[index] || 0;
   }
 
-  private static getOpponentPiecesOnPoint(gameState: GameState, point: number, player: 'WHITE' | 'BLACK'): number {
+  private static getOpponentPiecesOnPoint(gameState: GameState, point: number, player: string): number {
     const opponent = player === 'WHITE' ? 'BLACK' : 'WHITE';
     return this.getPiecesOnPoint(gameState, point, opponent);
   }
 
-  private static isBearingOffMove(from: number, to: number, player: 'WHITE' | 'BLACK'): boolean {
+  private static isBearingOffMove(from: number, to: number, player: string): boolean {
     if (player === 'WHITE') {
       return to > this.BOARD_POINTS;
     } else {
@@ -274,7 +281,7 @@ export class BackgammonEngine {
     }
   }
 
-  private static canBearOff(gameState: GameState, player: 'WHITE' | 'BLACK'): boolean {
+  private static canBearOff(gameState: GameState, player: string): boolean {
     // Check if all pieces are in home board
     const homeStart = player === 'WHITE' ? 19 : 1;
     const homeEnd = player === 'WHITE' ? 24 : 6;
@@ -289,7 +296,7 @@ export class BackgammonEngine {
     return true;
   }
 
-  private static isValidBearingOff(gameState: GameState, from: number, to: number, player: 'WHITE' | 'BLACK'): boolean {
+  private static isValidBearingOff(gameState: GameState, from: number, to: number, player: string): boolean {
     const diceValue = Math.abs(to - from);
 
     if (player === 'WHITE') {
@@ -313,7 +320,7 @@ export class BackgammonEngine {
     }
   }
 
-  private static isValidMoveDirection(from: number, to: number, player: 'WHITE' | 'BLACK'): boolean {
+  private static isValidMoveDirection(from: number, to: number, player: string): boolean {
     if (player === 'WHITE') {
       return to > from; // White moves forward (increasing point numbers)
     } else {

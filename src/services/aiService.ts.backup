@@ -48,6 +48,10 @@ export class AIService {
     const randomIndex = Math.floor(Math.random() * availableMoves.length);
     const selectedMove = availableMoves[randomIndex];
 
+    if (!selectedMove) {
+      return null;
+    }
+
     return {
       from: selectedMove.from,
       to: selectedMove.to,
