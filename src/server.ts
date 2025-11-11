@@ -18,8 +18,16 @@ import {
 } from './security-middleware';
 import { cacheService, CACHE_KEYS, CACHE_TTL } from './cache-service';
 
+// Import routes
+import playersRouter from './routes/players';
+import authRouter from './routes/auth';
+import userRouter from './routes/user';
+import gamesRouter from './routes/games';
+import gnubgRouter from './routes/gnubg';
+import gnubgDebugRouter from './routes/gnubgDebug';
+
 // DDoS Protection middleware
-const ddosProtection = (req, res, next) => {
+const ddosProtection = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const clientIP = req.ip || req.connection.remoteAddress;
   const userAgent = req.get('User-Agent') || '';
   const suspiciousPatterns = [
@@ -53,11 +61,6 @@ const ddosProtection = (req, res, next) => {
 // Initialize Prisma client with connection pooling
 export const prisma = new PrismaClient({
   log: config.nodeEnv === 'development' ? ['query', 'info', 'warn', 'error'] : ['error'],
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
 });
 
 const app = express();
@@ -209,6 +212,52 @@ app.get('/api/cache-status', async (req: express.Request, res: express.Response)
     },
     timestamp: new Date().toISOString()
   });
+});
+
+// Global performance monitor endpoint
+app.get('/api/performance/global', async (req: express.Request, res: express.Response) => {
+  const clientIP = req.ip || req.connection.remoteAddress
+  const userAgent = req.get('User-Agent') || ''
+  const clientRegion = (req.headers['x-client-region'] as string) || 'unknown'
+
+  // Detect device type for performance recommendations
+  const isMobile = /Mobile|Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent)
+  const isSlowConnection = req.headers['save-data'] === 'on'
+
+  const performanceData = {
+    timestamp: new Date().toISOString(),
+    client: {
+      ip: clientIP,
+      region: clientRegion,
+      userAgent: userAgent.substring(0, 100), // Truncate for privacy
+      device: isMobile ? 'mobile' : 'desktop',
+      slowConnection: isSlowConnection
+    },
+    server: {
+      region: process.env.NETLIFY_REGION || 'unknown',
+      uptime: Math.round(process.uptime()),
+      nodeVersion: process.version
+    },
+    performance: {
+      compressionEnabled: true,
+      cachingEnabled: true,
+      cdnEnabled: true,
+      globalOptimization: true
+    },
+    recommendations: {
+      cacheStrategy: isSlowConnection ? 'aggressive' : 'balanced',
+      imageOptimization: isMobile ? 'mobile-first' : 'high-quality',
+      connectionOptimization: isSlowConnection ? 'minimal-payload' : 'full-features'
+    },
+    metrics: {
+      targetResponseTime: '< 200ms',
+      targetGlobalLatency: '< 100ms',
+      compressionRatio: '60-80%',
+      cacheHitRate: '85%+'
+    }
+  }
+
+  res.json(performanceData)
 });
 
 // Route racine with security info
