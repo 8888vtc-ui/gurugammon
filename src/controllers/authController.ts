@@ -4,8 +4,10 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from '../server';
+import { config } from '../config';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// Use validated JWT_SECRET from config
+const JWT_SECRET = config.jwtSecret!; // ! because config validates it exists
 
 // Inscription
 export const register = async (req: Request, res: Response) => {

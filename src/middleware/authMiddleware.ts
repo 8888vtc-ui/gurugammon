@@ -2,8 +2,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../server';
+import { config } from '../config';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// Use validated JWT_SECRET from config
+const JWT_SECRET = config.jwtSecret!; // ! because config validates it exists
 
 // Interface pour étendre Request
 export interface AuthRequest extends Request {
