@@ -187,6 +187,33 @@ model games {
   @@map("games")
 }
 
+model user_learning_progress {
+  id          String   @id @default(cuid())
+  user_id     String
+  rule_key    String   // 'basic', 'movement', 'hitting', 'bearing_off'
+  viewed_at   DateTime @default(now())
+  completed   Boolean  @default(false)
+  completed_at DateTime?
+  score       Int?     // Quiz score if applicable
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@unique([user_id, rule_key])
+  @@map("user_learning_progress")
+}
+
+model user_achievements {
+  id          String   @id @default(cuid())
+  user_id     String
+  achievement String   // Achievement name
+  description String
+  icon        String   // Emoji or icon identifier
+  unlocked_at DateTime @default(now())
+  category    String   // 'learning', 'gaming', 'social'
+
+  @@map("user_achievements")
+}
+
 model users {
   id                                 String                    @id
   email                              String                    @unique
