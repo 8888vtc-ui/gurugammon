@@ -37,6 +37,16 @@ exports.handler = async (event, context) => {
         return await generateTournamentImage(queryParams)
       case 'share':
         return await generateShareImage(queryParams)
+      case 'progress':
+        return await generateProgressImage(queryParams)
+      case 'stats':
+        return await generateStatsImage(queryParams)
+      case 'elo-chart':
+        return await generateELOChartImage(queryParams)
+      case 'leaderboard':
+        return await generateLeaderboardImage(queryParams)
+      case 'timeline':
+        return await generateTimelineImage(queryParams)
       default:
         return {
           statusCode: 404,
@@ -379,4 +389,328 @@ function drawTournamentBracket(ctx, players) {
   ctx.moveTo(300, startY)
   ctx.lineTo(300, startY + (players.length - 1) * spacing)
   ctx.stroke()
+}
+
+// Generate learning progress visualization
+function generateProgressImage(params) {
+  const { username, gamesPlayed, currentELO, improvement, favoriteOpening, winRate } = params
+
+  const canvas = createCanvas(1000, 600)
+  const ctx = canvas.getContext('2d')
+
+  // Background gradient
+  const gradient = ctx.createLinearGradient(0, 0, 1000, 600)
+  gradient.addColorStop(0, '#4CAF50')
+  gradient.addColorStop(1, '#2E7D32')
+  ctx.fillStyle = gradient
+  ctx.fillRect(0, 0, 1000, 600)
+
+  // Title
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = 'bold 36px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText(`${username}'s Learning Progress`, 500, 50)
+
+  // Stats grid
+  ctx.font = '24px Arial'
+  ctx.textAlign = 'left'
+
+  const stats = [
+    { label: 'Games Played:', value: gamesPlayed || '0' },
+    { label: 'Current ELO:', value: currentELO || '1500' },
+    { label: 'Improvement:', value: `${improvement || '0'} points` },
+    { label: 'Win Rate:', value: `${winRate || '0'}%` },
+    { label: 'Favorite Opening:', value: favoriteOpening || '24/20' }
+  ]
+
+  stats.forEach((stat, index) => {
+    const y = 120 + (index * 60)
+    ctx.fillStyle = '#FFD700'
+    ctx.fillText(stat.label, 100, y)
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillText(stat.value, 350, y)
+  })
+
+  // Progress bar
+  const progress = Math.min((winRate || 0) / 100, 1)
+  ctx.fillStyle = '#333333'
+  ctx.fillRect(100, 450, 600, 30)
+  ctx.fillStyle = '#FFD700'
+  ctx.fillRect(100, 450, 600 * progress, 30)
+
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = '20px Arial'
+  ctx.fillText(`Win Rate Progress: ${winRate || 0}%`, 100, 430)
+
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=3600'
+    },
+    body: canvas.toBuffer('image/png').toString('base64'),
+    isBase64Encoded: true
+  }
+}
+
+// Generate statistics overview image
+function generateStatsImage(params) {
+  const { username, totalGames, wins, losses, draws, avgGameLength, bestStreak, currentStreak } = params
+
+  const canvas = createCanvas(1000, 700)
+  const ctx = canvas.getContext('2d')
+
+  // Background
+  ctx.fillStyle = '#1a237e'
+  ctx.fillRect(0, 0, 1000, 700)
+
+  // Title
+  ctx.fillStyle = '#FFD700'
+  ctx.font = 'bold 32px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText(`${username}'s Statistics`, 500, 50)
+
+  // Stats in a grid
+  const stats = [
+    ['Total Games', totalGames || '0'],
+    ['Wins', wins || '0'],
+    ['Losses', losses || '0'],
+    ['Draws', draws || '0'],
+    ['Win Rate', `${Math.round(((wins || 0) / Math.max(totalGames || 1, 1)) * 100)}%`],
+    ['Avg Game Length', `${avgGameLength || '0'} moves`],
+    ['Best Streak', bestStreak || '0'],
+    ['Current Streak', currentStreak || '0']
+  ]
+
+  ctx.font = '20px Arial'
+  ctx.textAlign = 'left'
+
+  for (let i = 0; i < stats.length; i++) {
+    const row = Math.floor(i / 2)
+    const col = i % 2
+    const x = 100 + (col * 400)
+    const y = 120 + (row * 60)
+
+    ctx.fillStyle = '#BBDEFB'
+    ctx.fillText(stats[i][0], x, y)
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillText(stats[i][1], x + 200, y)
+  }
+
+  // Simple pie chart for win/loss
+  const total = (wins || 0) + (losses || 0) + (draws || 0)
+  if (total > 0) {
+    let startAngle = 0
+
+    // Wins (green)
+    const winAngle = ((wins || 0) / total) * 2 * Math.PI
+    ctx.fillStyle = '#4CAF50'
+    ctx.beginPath()
+    ctx.moveTo(700, 200)
+    ctx.arc(700, 200, 60, startAngle, startAngle + winAngle)
+    ctx.closePath()
+    ctx.fill()
+
+    // Losses (red)
+    startAngle += winAngle
+    const lossAngle = ((losses || 0) / total) * 2 * Math.PI
+    ctx.fillStyle = '#F44336'
+    ctx.beginPath()
+    ctx.moveTo(700, 200)
+    ctx.arc(700, 200, 60, startAngle, startAngle + lossAngle)
+    ctx.closePath()
+    ctx.fill()
+
+    // Draws (orange)
+    startAngle += lossAngle
+    const drawAngle = ((draws || 0) / total) * 2 * Math.PI
+    ctx.fillStyle = '#FF9800'
+    ctx.beginPath()
+    ctx.moveTo(700, 200)
+    ctx.arc(700, 200, 60, startAngle, startAngle + drawAngle)
+    ctx.closePath()
+    ctx.fill()
+  }
+
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=3600'
+    },
+    body: canvas.toBuffer('image/png').toString('base64'),
+    isBase64Encoded: true
+  }
+}
+
+// Generate ELO rating chart
+function generateELOChartImage(params) {
+  const { username, eloHistory } = params
+
+  const canvas = createCanvas(1000, 600)
+  const ctx = canvas.getContext('2d')
+
+  // Background
+  ctx.fillStyle = '#0D47A1'
+  ctx.fillRect(0, 0, 1000, 600)
+
+  // Title
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = 'bold 28px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText(`${username}'s ELO Rating Progress`, 500, 40)
+
+  // Simple line chart (simplified)
+  if (eloHistory && eloHistory.length > 0) {
+    ctx.strokeStyle = '#FFD700'
+    ctx.lineWidth = 3
+    ctx.beginPath()
+
+    const points = eloHistory.slice(-10) // Last 10 games
+    const stepX = 800 / Math.max(points.length - 1, 1)
+
+    points.forEach((elo, index) => {
+      const x = 100 + (index * stepX)
+      const y = 500 - ((elo - 1200) * 300 / 800) // Scale to fit
+
+      if (index === 0) {
+        ctx.moveTo(x, y)
+      } else {
+        ctx.lineTo(x, y)
+      }
+
+      // Draw point
+      ctx.fillStyle = '#FFD700'
+      ctx.beginPath()
+      ctx.arc(x, y, 4, 0, 2 * Math.PI)
+      ctx.fill()
+    })
+
+    ctx.stroke()
+
+    // Labels
+    ctx.fillStyle = '#FFFFFF'
+    ctx.font = '16px Arial'
+    ctx.textAlign = 'center'
+    points.forEach((elo, index) => {
+      if (index % 2 === 0) { // Every other point
+        const x = 100 + (index * stepX)
+        ctx.fillText(elo.toString(), x, 530)
+      }
+    })
+  }
+
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=3600'
+    },
+    body: canvas.toBuffer('image/png').toString('base64'),
+    isBase64Encoded: true
+  }
+}
+
+// Generate leaderboard image
+function generateLeaderboardImage(params) {
+  const { title, players } = params
+
+  const canvas = createCanvas(800, 600)
+  const ctx = canvas.getContext('2d')
+
+  // Background
+  ctx.fillStyle = '#B71C1C'
+  ctx.fillRect(0, 0, 800, 600)
+
+  // Title
+  ctx.fillStyle = '#FFD700'
+  ctx.font = 'bold 32px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText(title || 'Leaderboard', 400, 50)
+
+  // Top players
+  ctx.font = '20px Arial'
+  ctx.textAlign = 'left'
+
+  const topPlayers = (players || ['Player 1: 1800', 'Player 2: 1750', 'Player 3: 1700']).slice(0, 10)
+
+  topPlayers.forEach((player, index) => {
+    const y = 120 + (index * 40)
+    const rank = index + 1
+
+    // Rank medal
+    ctx.fillStyle = rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : rank === 3 ? '#CD7F32' : '#FFFFFF'
+    ctx.fillText(`${rank}.`, 50, y)
+
+    // Player name
+    ctx.fillStyle = '#FFFFFF'
+    ctx.fillText(player, 100, y)
+  })
+
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=3600'
+    },
+    body: canvas.toBuffer('image/png').toString('base64'),
+    isBase64Encoded: true
+  }
+}
+
+// Generate game timeline image
+function generateTimelineImage(params) {
+  const { username, gameHistory } = params
+
+  const canvas = createCanvas(1000, 600)
+  const ctx = canvas.getContext('2d')
+
+  // Background
+  ctx.fillStyle = '#263238'
+  ctx.fillRect(0, 0, 1000, 600)
+
+  // Title
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = 'bold 28px Arial'
+  ctx.textAlign = 'center'
+  ctx.fillText(`${username}'s Game Timeline`, 500, 40)
+
+  // Timeline visualization (simplified)
+  ctx.strokeStyle = '#FFD700'
+  ctx.lineWidth = 2
+  ctx.beginPath()
+  ctx.moveTo(100, 300)
+  ctx.lineTo(900, 300)
+  ctx.stroke()
+
+  // Game markers
+  const games = gameHistory || ['Win vs AI', 'Loss vs Player', 'Win Tournament', 'Draw vs Expert']
+  const stepX = 800 / Math.max(games.length - 1, 1)
+
+  games.forEach((game, index) => {
+    const x = 100 + (index * stepX)
+    const isWin = game.includes('Win')
+
+    // Game marker
+    ctx.fillStyle = isWin ? '#4CAF50' : game.includes('Loss') ? '#F44336' : '#FF9800'
+    ctx.beginPath()
+    ctx.arc(x, 300, 8, 0, 2 * Math.PI)
+    ctx.fill()
+
+    // Game label
+    ctx.fillStyle = '#FFFFFF'
+    ctx.font = '14px Arial'
+    ctx.textAlign = 'center'
+    ctx.fillText(game, x, 340)
+  })
+
+  return {
+    statusCode: 200,
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=3600'
+    },
+    body: canvas.toBuffer('image/png').toString('base64'),
+    isBase64Encoded: true
+  }
 }
