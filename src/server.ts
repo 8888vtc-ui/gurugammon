@@ -312,13 +312,11 @@ app.use((error: any, req: express.Request, res: express.Response, next: express.
     })
   };
 
-  // Log error details separately for monitoring
-  logger.error('Application Error:', {
-    error: {
-      message: error.message,
-      stack: error.stack
-    },
-    request: {
+  // Log error details for monitoring
+  logger.error('Application Error Details:', {
+    message: error.message,
+    stack: error.stack,
+    requestContext: {
       method: req.method,
       url: req.url,
       ip: req.ip,

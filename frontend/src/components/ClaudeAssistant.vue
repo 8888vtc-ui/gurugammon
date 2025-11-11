@@ -275,492 +275,424 @@
   </div>
 </template>
 
-<script setup>
-import { ref, reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick, computed, watch } from 'vue'
 import { useGameStore } from '@/stores/game'
 import apiService from '@/services/api.service'
 import { useUserStore } from '@/stores/user'
 
-export default {
-  name: 'ClaudeAssistant',
-  props: {
-    initialGameContext: {
-      type: Object,
-      default: null
+const gameStore = useGameStore()
+const userStore = useUserStore()
+
+// State
+const messages = ref([])
+const currentMessage = ref('')
+const isLoading = ref(false)
+const isTyping = ref(false)
+const isClaudeOnline = ref(false)
+const isMinimized = ref(false)
+const showSettings = ref(false)
+const showStats = ref(false)
+const showGameContext = ref(false)
+const activeAction = ref(null)
+const gameContext = ref(null)
+const quotaInfo = ref(null)
+const usageStats = ref({})
+const lastResponse = ref(null) // Track last AI response
+
+// Settings
+const settings = ref({
+  autoAnalysis: true,
+  showContext: true,
+  soundEnabled: true,
+  playerLevel: 'INTERMEDIATE',
+  coachingStyle: 'encouraging'
+})
+
+// Quick actions
+const quickActions = ref([
+  { id: 'analyze', icon: '🔍', label: 'Analyser la position' },
+  { id: 'suggest', icon: '💡', label: 'Suggérer un coup' },
+  { id: 'coach', icon: '🎯', label: 'Coaching perso' },
+  { id: 'explain', icon: '📚', label: 'Expliquer la stratégie' }
+])
+
+// Suggestions
+const suggestions = ref([
+  'Comment améliorer mon jeu ?',
+  'Quelle est la meilleure stratégie ?',
+  'Analyse ma position actuelle',
+  'Comment utiliser le cube ?'
+])
+
+// Refs
+const messagesContainer = ref(null)
+
+// Computed properties
+const claudeStatus = computed(() => {
+  if (isLoading.value) return '🔄 En réflexion...'
+  if (!isClaudeOnline.value) return '❌ Hors ligne'
+  return '✅ Prêt à aider'
+})
+
+const canSendMessage = computed(() => {
+  return currentMessage.value.trim().length > 0 &&
+         !isLoading.value &&
+         isClaudeOnline.value &&
+         (quotaInfo.value ? quotaInfo.value.remaining > 0 : true)
+})
+
+// AI Service tracking
+const currentAI = computed(() => lastResponse.value?.aiService || 'claude')
+const currentAIName = computed(() => {
+  if (currentAI.value === 'chatgpt') return 'ChatGPT - Coach Backgammon'
+  return 'Claude - Coach Backgammon'
+})
+
+const initialize = async () => {
+  await checkClaudeHealth()
+  await loadUsageStats()
+  loadSettings()
+
+  if (settings.value.showContext && gameContext.value) {
+    showGameContext.value = true
+  }
+
+  // Add welcome message
+  addMessage('assistant', `Bonjour ! Je suis Claude, votre coach backgammon personnel. Comment puis-je vous aider aujourd'hui ?`)
+}
+
+const checkClaudeHealth = async () => {
+  try {
+    const response = await fetch('/api/claude/health')
+    const data = await response.json()
+
+    isClaudeOnline.value = data.success && data.data.available
+
+    if (!isClaudeOnline.value) {
+      addMessage('assistant', '')
     }
-  },
-  
-  setup(props) {
-    const gameStore = useGameStore()
-    const userStore = useUserStore()
-    
-    // State
-    const messages = ref([])
-    const currentMessage = ref('')
-    const isLoading = ref(false)
-    const isTyping = ref(false)
-    const isClaudeOnline = ref(false)
-    const isMinimized = ref(false)
-    const showSettings = ref(false)
-    const showStats = ref(false)
-    const showGameContext = ref(false)
-    const activeAction = ref(null)
-    const gameContext = ref(props.initialGameContext)
-    const quotaInfo = ref(null)
-    const usageStats = ref({})
-    const lastResponse = ref(null) // Track last AI response
-    
-    // Settings
-    const settings = ref({
-      autoAnalysis: true,
-      showContext: true,
-      soundEnabled: true,
-      playerLevel: 'INTERMEDIATE',
-      coachingStyle: 'encouraging'
+
+  } catch (error) {
+    console.error('Claude health check failed:', error)
+    isClaudeOnline.value = false
+  }
+}
+
+const loadUsageStats = async () => {
+  try {
+    const token = localStorage.getItem('jwt_token')
+    if (!token) return
+
+    const response = await fetch('/api/claude/stats', {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
     })
-    
-    // Quick actions
-    const quickActions = ref([
-      { id: 'analyze', icon: '🔍', label: 'Analyser la position' },
-      { id: 'suggest', icon: '💡', label: 'Suggérer un coup' },
-      { id: 'coach', icon: '🎯', label: 'Coaching perso' },
-      { id: 'explain', icon: '📚', label: 'Expliquer la stratégie' }
-    ])
-    
-    // Suggestions
-    const suggestions = ref([
+
+    if (response.ok) {
+      const data = await response.json()
+      usageStats.value = data.data
+      quotaInfo.value = {
+        remaining: data.data.quota_remaining,
+        total: data.data.requests_this_month + data.data.quota_remaining
+      }
+    }
+
+  } catch (error) {
+    console.error('Failed to load usage stats:', error)
+  }
+}
+
+const sendMessage = async () => {
+  if (!canSendMessage.value) return
+
+  const messageText = currentMessage.value.trim()
+  currentMessage.value = ''
+
+  // Add user message
+  addMessage('user', messageText)
+
+  // Show typing indicator
+  isTyping.value = true
+  isLoading.value = true
+
+  try {
+    const token = localStorage.getItem('jwt_token')
+    if (!token) {
+      throw new Error('No authentication token')
+    }
+
+    const response = await fetch('/api/claude/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        message: messageText,
+        gameContext: showGameContext.value ? gameContext.value : null,
+        playerLevel: settings.value.playerLevel
+      })
+    })
+
+    const data = await response.json()
+
+    if (data.success) {
+      addMessage('assistant', data.data.response)
+
+      // Store response information for UI updates
+      lastResponse.value = {
+        aiService: data.data.aiService,
+        model: data.data.model,
+        usedFallback: data.data.usedFallback || false
+      }
+
+      // Play sound if enabled
+      if (settings.value.soundEnabled) {
+        playMessageSound()
+      }
+
+      // Update usage stats
+      await loadUsageStats()
+
+    } else {
+      addMessage('assistant', ` Erreur: ${data.message || 'Impossible de traiter votre demande'}`)
+    }
+
+  } catch (error) {
+    console.error('Claude chat error:', error)
+    addMessage('assistant', ' Une erreur est survenue. Veuillez réessayer plus tard.')
+  } finally {
+    isTyping.value = false
+    isLoading.value = false
+    activeAction.value = null
+  }
+}
+
+const executeQuickAction = async (action) => {
+  if (isLoading.value || !isClaudeOnline.value) return
+
+  activeAction.value = action.id
+
+  switch (action.id) {
+    case 'analyze':
+      await analyzePosition()
+      break
+    case 'suggest':
+      await suggestMoves()
+      break
+    case 'coach':
+      await getCoaching()
+      break
+    case 'explain':
+      await explainStrategy()
+      break
+  }
+}
+
+const analyzePosition = async () => {
+  if (!gameContext.value) {
+    addMessage('assistant', ' Je dois d\'abord connaître la position actuelle pour l\'analyser.')
+    return
+  }
+
+  try {
+    const token = localStorage.getItem('jwt_token')
+    const response = await fetch('/api/claude/analyze', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        boardState: gameContext.value.boardState,
+        dice: gameContext.value.dice,
+        playerLevel: settings.value.playerLevel
+      })
+    })
+
+    const data = await response.json()
+
+    if (data.success) {
+      addMessage('assistant', ` **Analyse de la position:**\n\n${data.data.analysis}`)
+    } else {
+      addMessage('assistant', ` Erreur d'analyse: ${data.message}`)
+    }
+
+  } catch (error) {
+    addMessage('assistant', ' Impossible d\'analyser la position actuellement.')
+  }
+}
+
+const suggestMoves = async () => {
+  if (!gameContext.value || !gameContext.value.availableMoves) {
+    addMessage('assistant', ' J\'ai besoin des coups disponibles pour faire des suggestions.')
+    return
+  }
+
+  addMessage('assistant', ' **Suggestions de coups:**\n\nEn cours d\'analyse...')
+}
+
+const getCoaching = async () => {
+  addMessage('assistant', ' **Coaching personnalisé:**\n\nBasé sur votre progression récente, je vous recommande de...')
+}
+
+const explainStrategy = async () => {
+  addMessage('assistant', ' **Conseils stratégiques:**\n\nVoici les principes fondamentaux à maîtriser...')
+}
+
+const addMessage = (type, text) => {
+  const message = {
+    id: Date.now() + Math.random(),
+    type,
+    text,
+    timestamp: new Date().toISOString(),
+    liked: false
+  }
+
+  messages.value.push(message)
+  scrollToBottom()
+}
+
+const formatMessage = (text) => {
+  // Convert markdown-like formatting to HTML
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>')
+    .replace(/(\d+\.\s)/g, '<br>$1')
+}
+
+const formatTime = (timestamp) => {
+  return new Date(timestamp).toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (messagesContainer.value) {
+      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+    }
+  })
+}
+
+const copyMessage = (text) => {
+  navigator.clipboard.writeText(text).then(() => {
+    // Show copied feedback
+    console.log('Message copied to clipboard')
+  })
+}
+
+const likeMessage = (messageId) => {
+  const message = messages.value.find(m => m.id === messageId)
+  if (message) {
+    message.liked = !message.liked
+  }
+}
+
+const useSuggestion = (suggestion) => {
+  currentMessage.value = suggestion
+}
+
+const playMessageSound = () => {
+  try {
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT')
+    audio.volume = 0.3
+    audio.play().catch(() => {
+      // Ignore audio play errors
+    })
+  } catch (error) {
+    // Ignore audio errors
+  }
+}
+
+const loadSettings = () => {
+  const saved = localStorage.getItem('claudeSettings')
+  if (saved) {
+    try {
+      settings.value = { ...settings.value, ...JSON.parse(saved) }
+    } catch (error) {
+      console.error('Failed to load Claude settings:', error)
+    }
+  }
+}
+
+const saveSettings = () => {
+  localStorage.setItem('claudeSettings', JSON.stringify(settings.value))
+  toggleSettings()
+}
+
+const resetSettings = () => {
+  settings.value = {
+    autoAnalysis: true,
+    showContext: true,
+    soundEnabled: true,
+    playerLevel: 'INTERMEDIATE',
+    coachingStyle: 'encouraging'
+  }
+}
+
+const toggleMinimized = () => {
+  isMinimized.value = !isMinimized.value
+}
+
+const toggleSettings = () => {
+  showSettings.value = !showSettings.value
+}
+
+const clearChat = () => {
+  if (confirm('Êtes-vous sûr de vouloir effacer toute la conversation ?')) {
+    messages.value = []
+    addMessage('assistant', 'Conversation effacée. Comment puis-je vous aider ?')
+  }
+}
+
+const handleKeyDown = (event) => {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    sendMessage()
+  }
+}
+
+const handleInput = () => {
+  // Update suggestions based on input
+  if (currentMessage.value.length > 0) {
+    suggestions.value = []
+  } else {
+    suggestions.value = [
       'Comment améliorer mon jeu ?',
       'Quelle est la meilleure stratégie ?',
       'Analyse ma position actuelle',
       'Comment utiliser le cube ?'
-    ])
-    
-    // Refs
-    const messagesContainer = ref(null)
-    
-    // Computed properties
-    const claudeStatus = computed(() => {
-      if (isLoading.value) return '🔄 En réflexion...'
-      if (!isClaudeOnline.value) return '❌ Hors ligne'
-      return '✅ Prêt à aider'
-    })
-    
-    const canSendMessage = computed(() => {
-      return currentMessage.value.trim().length > 0 &&
-             !isLoading.value &&
-             isClaudeOnline.value &&
-             (quotaInfo.value ? quotaInfo.value.remaining > 0 : true)
-    })
-    
-    // AI Service tracking
-    const currentAI = computed(() => lastResponse.value?.aiService || 'claude')
-    const currentAIName = computed(() => {
-      if (currentAI.value === 'chatgpt') return 'ChatGPT - Coach Backgammon'
-      return 'Claude - Coach Backgammon'
-    })
-    
-    // Initialize
-    const initialize = async () => {
-      await checkClaudeHealth()
-      await loadUsageStats()
-      loadSettings()
-      
-      if (settings.value.showContext && gameContext.value) {
-        showGameContext.value = true
-      }
-      
-      // Add welcome message
-      addMessage('assistant', `Bonjour ! Je suis Claude, votre coach backgammon personnel. Comment puis-je vous aider aujourd'hui ?`)
-    }
-    
-    // Check Claude API health
-    const checkClaudeHealth = async () => {
-      try {
-        const response = await fetch('/api/claude/health')
-        const data = await response.json()
-        
-        isClaudeOnline.value = data.success && data.data.available
-        
-        if (!isClaudeOnline.value) {
-          addMessage('assistant', '⚠️ Je suis temporairement indisponible. Veuillez réessayer plus tard.')
-        }
-        
-      } catch (error) {
-        console.error('Claude health check failed:', error)
-        isClaudeOnline.value = false
-      }
-    }
-    
-    // Load usage statistics
-    const loadUsageStats = async () => {
-      try {
-        const token = localStorage.getItem('jwt_token')
-        if (!token) return
-        
-        const response = await fetch('/api/claude/stats', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        
-        if (response.ok) {
-          const data = await response.json()
-          usageStats.value = data.data
-          quotaInfo.value = {
-            remaining: data.data.quota_remaining,
-            total: data.data.requests_this_month + data.data.quota_remaining
-          }
-        }
-        
-      } catch (error) {
-        console.error('Failed to load usage stats:', error)
-      }
-    }
-    
-    // Send message to Claude
-    const sendMessage = async () => {
-      if (!canSendMessage.value) return
-      
-      const messageText = currentMessage.value.trim()
-      currentMessage.value = ''
-      
-      // Add user message
-      addMessage('user', messageText)
-      
-      // Show typing indicator
-      isTyping.value = true
-      isLoading.value = true
-      
-      try {
-        const token = localStorage.getItem('jwt_token')
-        if (!token) {
-          throw new Error('No authentication token')
-        }
-        
-        const response = await fetch('/api/claude/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            message: messageText,
-            gameContext: showGameContext.value ? gameContext.value : null,
-            playerLevel: settings.value.playerLevel
-          })
-        })
-        
-        const data = await response.json()
-        
-        if (data.success) {
-          addMessage('assistant', data.data.response)
-          
-          // Store response information for UI updates
-          lastResponse.value = {
-            aiService: data.data.aiService,
-            model: data.data.model,
-            usedFallback: data.data.usedFallback || false
-          }
-          
-          // Play sound if enabled
-          if (settings.value.soundEnabled) {
-            playMessageSound()
-          }
-          
-          // Update usage stats
-          await loadUsageStats()
-          
-        } else {
-          addMessage('assistant', `❌ Erreur: ${data.message || 'Impossible de traiter votre demande'}`)
-        }
-        
-      } catch (error) {
-        console.error('Claude chat error:', error)
-        addMessage('assistant', '❌ Une erreur est survenue. Veuillez réessayer plus tard.')
-      } finally {
-        isTyping.value = false
-        isLoading.value = false
-        activeAction.value = null
-      }
-    }
-    
-    // Execute quick action
-    const executeQuickAction = async (action) => {
-      if (isLoading.value || !isClaudeOnline.value) return
-      
-      activeAction.value = action.id
-      
-      switch (action.id) {
-        case 'analyze':
-          await analyzePosition()
-          break
-        case 'suggest':
-          await suggestMoves()
-          break
-        case 'coach':
-          await getCoaching()
-          break
-        case 'explain':
-          await explainStrategy()
-          break
-      }
-    }
-    
-    // Quick action implementations
-    const analyzePosition = async () => {
-      if (!gameContext.value) {
-        addMessage('assistant', '📋 Je dois d\'abord connaître la position actuelle pour l\'analyser.')
-        return
-      }
-      
-      try {
-        const token = localStorage.getItem('jwt_token')
-        const response = await fetch('/api/claude/analyze', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            boardState: gameContext.value.boardState,
-            dice: gameContext.value.dice,
-            playerLevel: settings.value.playerLevel
-          })
-        })
-        
-        const data = await response.json()
-        
-        if (data.success) {
-          addMessage('assistant', `🔍 **Analyse de la position:**\n\n${data.data.analysis}`)
-        } else {
-          addMessage('assistant', `❌ Erreur d'analyse: ${data.message}`)
-        }
-        
-      } catch (error) {
-        addMessage('assistant', '❌ Impossible d\'analyser la position actuellement.')
-      }
-    }
-    
-    const suggestMoves = async () => {
-      if (!gameContext.value || !gameContext.value.availableMoves) {
-        addMessage('assistant', '📋 J\'ai besoin des coups disponibles pour faire des suggestions.')
-        return
-      }
-      
-      addMessage('assistant', '💡 **Suggestions de coups:**\n\nEn cours d\'analyse...')
-    }
-    
-    const getCoaching = async () => {
-      addMessage('assistant', '🎯 **Coaching personnalisé:**\n\nBasé sur votre progression récente, je vous recommande de...')
-    }
-    
-    const explainStrategy = async () => {
-      addMessage('assistant', '📚 **Conseils stratégiques:**\n\nVoici les principes fondamentaux à maîtriser...')
-    }
-    
-    // Utility functions
-    const addMessage = (type, text) => {
-      const message = {
-        id: Date.now() + Math.random(),
-        type,
-        text,
-        timestamp: new Date().toISOString(),
-        liked: false
-      }
-      
-      messages.value.push(message)
-      scrollToBottom()
-    }
-    
-    const formatMessage = (text) => {
-      // Convert markdown-like formatting to HTML
-      return text
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/\n/g, '<br>')
-        .replace(/(\d+\.\s)/g, '<br>$1')
-    }
-    
-    const formatTime = (timestamp) => {
-      return new Date(timestamp).toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
-        minute: '2-digit'
-      })
-    }
-    
-    const scrollToBottom = () => {
-      nextTick(() => {
-        if (messagesContainer.value) {
-          messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-        }
-      })
-    }
-    
-    const copyMessage = (text) => {
-      navigator.clipboard.writeText(text).then(() => {
-        // Show copied feedback
-        console.log('Message copied to clipboard')
-      })
-    }
-    
-    const likeMessage = (messageId) => {
-      const message = messages.value.find(m => m.id === messageId)
-      if (message) {
-        message.liked = !message.liked
-      }
-    }
-    
-    const useSuggestion = (suggestion) => {
-      currentMessage.value = suggestion
-    }
-    
-    const playMessageSound = () => {
-      try {
-        const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT')
-        audio.volume = 0.3
-        audio.play().catch(() => {
-          // Ignore audio play errors
-        })
-      } catch (error) {
-        // Ignore audio errors
-      }
-    }
-    
-    // Settings management
-    const loadSettings = () => {
-      const saved = localStorage.getItem('claudeSettings')
-      if (saved) {
-        try {
-          settings.value = { ...settings.value, ...JSON.parse(saved) }
-        } catch (error) {
-          console.error('Failed to load Claude settings:', error)
-        }
-      }
-    }
-    
-    const saveSettings = () => {
-      localStorage.setItem('claudeSettings', JSON.stringify(settings.value))
-      toggleSettings()
-    }
-    
-    const resetSettings = () => {
-      settings.value = {
-        autoAnalysis: true,
-        showContext: true,
-        soundEnabled: true,
-        playerLevel: 'INTERMEDIATE',
-        coachingStyle: 'encouraging'
-      }
-    }
-    
-    // UI actions
-    const toggleMinimized = () => {
-      isMinimized.value = !isMinimized.value
-    }
-    
-    const toggleSettings = () => {
-      showSettings.value = !showSettings.value
-    }
-    
-    const clearChat = () => {
-      if (confirm('Êtes-vous sûr de vouloir effacer toute la conversation ?')) {
-        messages.value = []
-        addMessage('assistant', 'Conversation effacée. Comment puis-je vous aider ?')
-      }
-    }
-    
-    // Input handlers
-    const handleKeyDown = (event) => {
-      if (event.key === 'Enter' && !event.shiftKey) {
-        event.preventDefault()
-        sendMessage()
-      }
-    }
-    
-    const handleInput = () => {
-      // Update suggestions based on input
-      if (currentMessage.value.length > 0) {
-        suggestions.value = []
-      } else {
-        suggestions.value = [
-          'Comment améliorer mon jeu ?',
-          'Quelle est la meilleure stratégie ?',
-          'Analyse ma position actuelle',
-          'Comment utiliser le cube ?'
-        ]
-      }
-    }
-    
-    // Watch for game context changes
-    watch(() => props.initialGameContext, (newContext) => {
-      gameContext.value = newContext
-      
-      if (settings.value.autoAnalysis && newContext && isClaudeOnline.value) {
-        // Auto-analyze new position
-        setTimeout(() => {
-          if (settings.value.autoAnalysis) {
-            executeQuickAction(quickActions.value[0]) // Analyze action
-          }
-        }, 2000)
-      }
-    })
-    
-    // Lifecycle
-    onMounted(() => {
-      initialize()
-      
-      // Periodic health check
-      const healthInterval = setInterval(checkClaudeHealth, 30000) // Every 30 seconds
-      
-      onUnmounted(() => {
-        clearInterval(healthInterval)
-      })
-    })
-    
-    return {
-      // State
-      messages,
-      currentMessage,
-      isLoading,
-      isTyping,
-      isClaudeOnline,
-      isMinimized,
-      showSettings,
-      showStats,
-      showGameContext,
-      activeAction,
-      gameContext,
-      claudeStatus,
-      canSendMessage,
-      currentAI,
-      currentAIName,
-      lastResponse,
-      quickActions,
-      suggestions,
-      quotaInfo,
-      usageStats,
-      settings,
-      
-      // Refs
-      messagesContainer,
-      
-      // Methods
-      sendMessage,
-      executeQuickAction,
-      useSuggestion,
-      toggleMinimized,
-      toggleSettings,
-      clearChat,
-      handleKeyDown,
-      handleInput,
-      formatTime,
-      copyMessage,
-      likeMessage,
-      saveSettings,
-      resetSettings
-    }
+    ]
   }
 }
+
+watch(() => gameStore.initialGameContext, (newContext) => {
+  gameContext.value = newContext
+
+  if (settings.value.autoAnalysis && newContext && isClaudeOnline.value) {
+    // Auto-analyze new position
+    setTimeout(() => {
+      if (settings.value.autoAnalysis) {
+        executeQuickAction(quickActions.value[0]) // Analyze action
+      }
+    }, 2000)
+  }
+})
+
+onMounted(() => {
+  initialize()
+
+  // Periodic health check
+  const healthInterval = setInterval(checkClaudeHealth, 30000) // Every 30 seconds
+
+  onUnmounted(() => {
+    clearInterval(healthInterval)
+  })
+})
 </script>
 
 <style scoped>

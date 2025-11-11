@@ -143,7 +143,7 @@ async function testCompleteGameAnalysis() {
     // Show what the analysis would contain
     console.log('\n📋 EXPECTED ANALYSIS STRUCTURE:')
     console.log('When API keys are configured, the report will include:')
-    console.log('1. GNUBG Technical Analysis:')
+    console.log('1. Game Analyzer Technical Analysis:')
     console.log('   - Equity calculations for each move')
     console.log('   - Skill rating assessment')
     console.log('   - Luck factor analysis')

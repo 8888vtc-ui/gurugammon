@@ -292,86 +292,106 @@ async function generateAchievementImage(params) {
 
 // Generate tournament bracket image
 async function generateTournamentImage(params) {
-  const { tournamentName, players, round } = params
+  const startTime = Date.now()
+  const size = CANVAS_SIZES.tournament
 
-  const canvas = createCanvas(1200, 800)
+  const canvas = createCanvas(size.width, size.height)
   const ctx = canvas.getContext('2d')
 
   // Background
   ctx.fillStyle = '#1a1a2e'
-  ctx.fillRect(0, 0, 1200, 800)
+  ctx.fillRect(0, 0, size.width, size.height)
 
   // Tournament title
   ctx.fillStyle = '#FFD700'
   ctx.font = 'bold 36px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText(tournamentName || 'GAMMON GURU TOURNAMENT', 600, 50)
+  ctx.fillText(params.tournamentName || 'GAMMON GURU TOURNAMENT', size.width / 2, 50)
 
   // Round indicator
   ctx.fillStyle = '#FFFFFF'
   ctx.font = '24px Arial'
-  ctx.fillText(`Round ${round || 1}`, 600, 100)
+  ctx.fillText(`Round ${params.round || 1}`, size.width / 2, 100)
 
   // Draw simple bracket (simplified)
-  drawTournamentBracket(ctx, players || ['Player 1', 'Player 2', 'Player 3', 'Player 4'])
+  drawTournamentBracket(ctx, params.players || ['Player 1', 'Player 2', 'Player 3', 'Player 4'], size)
+
+  // Performance monitoring
+  const generationTime = Date.now() - startTime
+  const buffer = canvas.toBuffer('image/png', { quality: IMAGE_QUALITY.medium })
+  const fileSize = buffer.length
+
+  console.log(`Tournament image generated in ${generationTime}ms, size: ${fileSize} bytes (${(fileSize / 1024).toFixed(1)} KB)`)
 
   return {
     statusCode: 200,
     headers: {
       'Content-Type': 'image/png',
-      'Cache-Control': 'public, max-age=3600'
+      'Cache-Control': 'public, max-age=3600',
+      'X-Generation-Time': generationTime.toString(),
+      'X-File-Size': fileSize.toString()
     },
-    body: canvas.toBuffer('image/png').toString('base64'),
+    body: buffer.toString('base64'),
     isBase64Encoded: true
   }
 }
 
 // Generate social sharing image
 async function generateShareImage(params) {
-  const { username, score, achievement, gameType } = params
+  const startTime = Date.now()
+  const size = CANVAS_SIZES.share
 
-  const canvas = createCanvas(1200, 630) // Facebook/LinkedIn optimal size
+  const canvas = createCanvas(size.width, size.height)
   const ctx = canvas.getContext('2d')
 
   // Background gradient
-  const gradient = ctx.createLinearGradient(0, 0, 1200, 630)
+  const gradient = ctx.createLinearGradient(0, 0, size.width, size.height)
   gradient.addColorStop(0, '#667eea')
   gradient.addColorStop(1, '#764ba2')
   ctx.fillStyle = gradient
-  ctx.fillRect(0, 0, 1200, 630)
+  ctx.fillRect(0, 0, size.width, size.height)
 
   // Game logo/branding
   ctx.fillStyle = '#FFD700'
   ctx.font = 'bold 48px Arial'
   ctx.textAlign = 'center'
-  ctx.fillText('🎲 GAMMON GURU', 600, 100)
+  ctx.fillText('🎲 GAMMON GURU', size.width / 2, 100)
 
   // Achievement or score
   ctx.fillStyle = '#FFFFFF'
   ctx.font = 'bold 36px Arial'
-  if (achievement) {
-    ctx.fillText(`${username} unlocked: ${achievement}`, 600, 200)
+  if (params.achievement) {
+    ctx.fillText(`${params.username} unlocked: ${params.achievement}`, size.width / 2, 200)
   } else {
-    ctx.fillText(`${username} scored: ${score} points`, 600, 200)
+    ctx.fillText(`${params.username} scored: ${params.score} points`, size.width / 2, 200)
   }
 
   // Game type
   ctx.fillStyle = '#E0E0E0'
   ctx.font = '24px Arial'
-  ctx.fillText(gameType || 'Backgammon Tournament', 600, 280)
+  ctx.fillText(params.gameType || 'Backgammon Tournament', size.width / 2, 280)
 
   // Call to action
   ctx.fillStyle = '#FFD700'
   ctx.font = 'bold 28px Arial'
-  ctx.fillText('Join the revolution at gammon-guru.com', 600, 400)
+  ctx.fillText('Join the revolution at gammon-guru.com', size.width / 2, 400)
+
+  // Performance monitoring
+  const generationTime = Date.now() - startTime
+  const buffer = canvas.toBuffer('image/png', { quality: IMAGE_QUALITY.medium })
+  const fileSize = buffer.length
+
+  console.log(`Share image generated in ${generationTime}ms, size: ${fileSize} bytes (${(fileSize / 1024).toFixed(1)} KB)`)
 
   return {
     statusCode: 200,
     headers: {
       'Content-Type': 'image/png',
-      'Cache-Control': 'public, max-age=3600'
+      'Cache-Control': 'public, max-age=3600',
+      'X-Generation-Time': generationTime.toString(),
+      'X-File-Size': fileSize.toString()
     },
-    body: canvas.toBuffer('image/png').toString('base64'),
+    body: buffer.toString('base64'),
     isBase64Encoded: true
   }
 }
@@ -457,25 +477,25 @@ function getMistakeExplanation(type, played, best) {
   return explanations[type] || 'This move could have been improved for better results.'
 }
 
-function drawTournamentBracket(ctx, players) {
-  const startY = 150
-  const spacing = 100
+function drawTournamentBracket(ctx, players, size) {
+  const startY = size.height * 0.15
+  const spacing = size.height * 0.08
 
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = '18px Arial'
+  ctx.font = `${size.width * 0.025}px Arial`
   ctx.textAlign = 'left'
 
   players.forEach((player, index) => {
     const y = startY + (index * spacing)
-    ctx.fillText(player, 100, y)
+    ctx.fillText(player, size.width * 0.08, y)
   })
 
   // Draw bracket lines (simplified)
   ctx.strokeStyle = '#FFD700'
-  ctx.lineWidth = 2
+  ctx.lineWidth = Math.max(1, size.width / 600)
   ctx.beginPath()
-  ctx.moveTo(300, startY)
-  ctx.lineTo(300, startY + (players.length - 1) * spacing)
+  ctx.moveTo(size.width * 0.3, startY)
+  ctx.lineTo(size.width * 0.3, startY + (players.length - 1) * spacing)
   ctx.stroke()
 }
 
