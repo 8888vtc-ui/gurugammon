@@ -20,7 +20,7 @@ async function callClaudeAI(messages, systemPrompt, playerLevel) {
   }
 
   const claudeRequest = {
-    model: 'claude-3-sonnet-20240229',
+    model: 'claude-3-5-sonnet-20241022',
     max_tokens: 1000,
     system: systemPrompt,
     messages: messages
@@ -46,7 +46,7 @@ async function callClaudeAI(messages, systemPrompt, playerLevel) {
   return {
     response: data.content[0].text,
     aiService: 'claude',
-    model: 'claude-3-sonnet-20240229'
+    model: 'claude-3-5-sonnet-20241022'
   }
 }
 

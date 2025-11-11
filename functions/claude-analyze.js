@@ -121,7 +121,7 @@ Provide:
 Be concise but thorough, focus on actionable advice.`
 
     const claudeRequest = {
-      model: 'claude-3-sonnet-20240229',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1500,
       system: systemPrompt,
       messages: [
