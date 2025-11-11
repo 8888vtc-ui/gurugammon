@@ -165,6 +165,28 @@ model game_analyses {
   @@unique([user_id, game_id])
 }
 
+model games {
+  id              String   @id
+  white_player_id String
+  black_player_id String?
+  game_mode       String   @default("AI_VS_PLAYER")
+  status          String   @default("WAITING") // WAITING, PLAYING, COMPLETED
+  winner          String?
+  score_white     Int      @default(0)
+  score_black     Int      @default(0)
+  board_state     Json     @default("{}")
+  current_player  String   @default("white")
+  dice            Json     @default("[]")
+  doubling_cube   Json     @default("{\"value\":1,\"owner\":null,\"centered\":true}")
+  match_length    Int      @default(1)
+  crawford_rule   Boolean  @default(true)
+  jacoby_rule     Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  @@map("games")
+}
+
 model users {
   id                                 String                    @id
   email                              String                    @unique

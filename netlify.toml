@@ -18,6 +18,16 @@
   to = "/.netlify/functions/game-analysis-report"
   status = 200
 
+[[redirects]]
+  from = "/api/games"
+  to = "/.netlify/functions/game-engine"
+  status = 200
+
+[[redirects]]
+  from = "/api/games/*"
+  to = "/.netlify/functions/game-engine"
+  status = 200
+
 [build.environment]
   NODE_VERSION = "18"
 
