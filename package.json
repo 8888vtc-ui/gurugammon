@@ -8,6 +8,7 @@
     "build": "npx tsc --project tsconfig.prod.json",
     "postbuild": "node scripts/copy-js.js",
     "build:prod": "npx tsc --noEmit false --skipLibCheck || echo 'TypeScript build completed with warnings'",
+    "prestart": "npm run build",
     "start": "node dist/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
