@@ -1,4 +1,6 @@
 // src/server.ts
+import fs from 'fs';
+import path from 'path';
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import type { Server } from 'http';
@@ -10,6 +12,9 @@ import cors from 'cors';
 import { createRateLimiter } from './middleware/rateLimiter';
 import { metricsRegistry } from './metrics/registry';
 import { httpRequestDurationSeconds, httpRequestsTotal } from './metrics/httpMetrics';
+
+const routerPath = path.join(require.resolve('express/lib/application'), '..', 'router', 'index.js');
+console.log('[startup] express router exists:', fs.existsSync(routerPath), routerPath);
 
 // Import JS modules with require to avoid TypeScript module resolution issues
 const {
