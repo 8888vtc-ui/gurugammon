@@ -3,7 +3,7 @@
 
 import type { GameMode } from '@prisma/client';
 import type { CubeHistoryEntry } from '../services/rules/cubeLogic';
-import type { CrawfordState } from '../services/rules/matchEngine';
+import { defaultCrawfordState, type CrawfordState } from '../services/rules/matchEngine';
 import type { Player } from './player';
 
 // Types pour le statut d'une partie
@@ -100,6 +100,7 @@ export interface Game {
   whiteTimeMs: number | null;
   blackTimeMs: number | null;
   matchLength: number | null;
+  crawford: CrawfordState;
   cube: CubeSnapshot;
   whiteScore: number;
   blackScore: number;
@@ -214,6 +215,7 @@ export function createGame(
     whiteTimeMs: null,
     blackTimeMs: null,
     matchLength: null,
+    crawford: defaultCrawfordState(),
     cube: {
       level: 1,
       owner: null,
@@ -241,6 +243,7 @@ export function createInitialGameState(player1: Player): GameState {
     whiteTimeMs: null,
     blackTimeMs: null,
     matchLength: null,
+    crawford: defaultCrawfordState(),
     cube: {
       level: 1,
       owner: null,
