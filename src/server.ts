@@ -18,8 +18,14 @@ import { createRateLimiter } from './middleware/rateLimiter';
 import { metricsRegistry } from './metrics/registry';
 import { httpRequestDurationSeconds, httpRequestsTotal } from './metrics/httpMetrics';
 
-const routerPath = path.join(path.dirname(require.resolve('express/lib/application')), 'router', 'index.js');
-console.log('[startup] express router exists:', fs.existsSync(routerPath), routerPath);
+const candidateRouterPaths = [
+  path.join(__dirname, '..', 'node_modules', 'express', 'lib', 'router', 'index.js'),
+  path.join(process.cwd(), 'node_modules', 'express', 'lib', 'router', 'index.js')
+];
+const resolvedRouterPath = candidateRouterPaths.find(candidate => fs.existsSync(candidate));
+const routerPathToReport = resolvedRouterPath ?? candidateRouterPaths[0];
+console.log('[startup] express router candidates:', candidateRouterPaths);
+console.log('[startup] express router exists:', Boolean(resolvedRouterPath), routerPathToReport);
 
 const expressModule = require('express') as typeof import('express');
 const express = (expressModule as unknown as { default?: typeof expressModule }).default ??
