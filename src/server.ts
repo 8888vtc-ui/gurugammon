@@ -22,7 +22,32 @@ const candidateRouterPaths = [
   path.join(__dirname, '..', 'node_modules', 'express', 'lib', 'router', 'index.js'),
   path.join(process.cwd(), 'node_modules', 'express', 'lib', 'router', 'index.js')
 ];
-const resolvedRouterPath = candidateRouterPaths.find(candidate => fs.existsSync(candidate));
+
+let resolvedRouterPath = candidateRouterPaths.find(candidate => fs.existsSync(candidate));
+
+if (!resolvedRouterPath) {
+  const fallbackRouterCandidates = [
+    path.join(__dirname, 'vendor', 'express-router', 'index.js'),
+    path.join(__dirname, '..', 'vendor', 'express-router', 'index.js'),
+    path.join(process.cwd(), 'vendor', 'express-router', 'index.js')
+  ];
+  const fallbackRouterPath = fallbackRouterCandidates.find(candidate => fs.existsSync(candidate));
+
+  if (fallbackRouterPath) {
+    const targetRouterPath = candidateRouterPaths[0]!;
+    try {
+      fs.mkdirSync(path.dirname(targetRouterPath), { recursive: true });
+      fs.copyFileSync(fallbackRouterPath, targetRouterPath);
+      resolvedRouterPath = targetRouterPath;
+      console.warn('[startup] Injected fallback Express router from', fallbackRouterPath);
+    } catch (error) {
+      console.error('[startup] Failed to inject fallback Express router from', fallbackRouterPath, error);
+    }
+  } else {
+    console.error('[startup] No Express router fallback found. Candidates:', fallbackRouterCandidates);
+  }
+}
+
 const routerPathToReport = resolvedRouterPath ?? candidateRouterPaths[0];
 console.log('[startup] express router candidates:', candidateRouterPaths);
 console.log('[startup] express router exists:', Boolean(resolvedRouterPath), routerPathToReport);
