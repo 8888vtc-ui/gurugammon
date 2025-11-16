@@ -12,5 +12,9 @@ docker compose -f "${COMPOSE_FILE}" up -d
 echo "[redeploy] Current services:"
 docker compose -f "${COMPOSE_FILE}" ps
 
-echo "[redeploy] Checking health endpoint..."
-curl -i http://localhost:3000/health || true
+echo "[redeploy] Checking internal health endpoint..."
+docker compose -f "${COMPOSE_FILE}" exec -T app \
+  curl -fsS http://localhost:3000/health/internal || {
+    echo "[redeploy] Internal healthcheck failed"
+    exit 1
+  }

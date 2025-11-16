@@ -3,7 +3,7 @@ set -euo pipefail
 
 SERVICE_NAME="${1:-app}"
 COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.dev.yml}"
-HEALTH_URL="${HEALTH_URL:-http://localhost:3000/health}"
+HEALTH_URL="${HEALTH_URL:-http://localhost:3000/health/internal}"
 INTERVAL_SECONDS="${INTERVAL_SECONDS:-30}"
 LOG_FILE="${LOG_FILE:-docker-health.txt}"
 
@@ -28,12 +28,13 @@ while true; do
   fi
 
   http_ok=0
-  if curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; then
+  if docker compose -f "${COMPOSE_FILE}" exec -T "${SERVICE_NAME}" \
+      curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; then
     http_ok=1
   fi
 
   if [[ "${status}" == "healthy" && "${http_ok}" -eq 1 ]]; then
-    echo "[watchdog] ${timestamp} ${SERVICE_NAME} is healthy (docker=${status}, http=ok)" >> "${LOG_FILE}"
+    echo "[watchdog] ${timestamp} ${SERVICE_NAME} healthy (docker=${status}, http=ok)" | tee -a "${LOG_FILE}"
     BACKOFF_SECONDS=5
   else
     echo "[watchdog] ${timestamp} ${SERVICE_NAME} unhealthy (docker=${status}, http=${http_ok}) – restarting with backoff ${BACKOFF_SECONDS}s" | tee -a "${LOG_FILE}"
@@ -49,3 +50,4 @@ while true; do
 
   sleep "${INTERVAL_SECONDS}"
 done
+

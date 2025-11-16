@@ -11,9 +11,9 @@ Ce document décrit le système d’auto-réparation du backend GammonGuru côt�
 
 ### 2.1 Dockerfile
 
-- `HEALTHCHECK` HTTP sur `http://localhost:3000/health`.
+- `HEALTHCHECK` HTTP interne sur `http://localhost:3000/health/internal` (non filtré par les middlewares avancés).
 - Intervalle : 30s, timeout : 5s, retries : 3.
-- Si `/health` renvoie une erreur ou ne répond pas, le conteneur passe en `unhealthy`.
+- Si `/health/internal` renvoie une erreur ou ne répond pas, le conteneur passe en `unhealthy`.
 
 ### 2.2 docker-compose.dev.yml
 
@@ -21,8 +21,8 @@ Ce document décrit le système d’auto-réparation du backend GammonGuru côt�
   - Image `postgres:15`.
   - Healthcheck via `pg_isready`.
 - Service `app` :
-  - Healthcheck via `curl http://localhost:3000/health`.
-  - `restart: on-failure` pour relancer en cas de crash.
+  - Healthcheck via `curl http://localhost:3000/health/internal` (depuis le conteneur).
+  - `restart: always` pour garantir la relance automatique si le conteneur devient `unhealthy`.
 
 ### 2.3 Endpoint /health de l’application
 
@@ -32,6 +32,12 @@ Ce document décrit le système d’auto-réparation du backend GammonGuru côt�
   - La DB est indisponible ou la requête échoue.
 - Retourne aussi des métriques (uptime, mémoire, WebSocket, environnement).
 
+### 2.4 Endpoint interne /health/internal
+
+- Utilisé pour les healthchecks Docker et les scripts internes (watchdog, redeploy).
+- Vérifie la santé de l’application et de la DB via une requête SQL minimale.
+- N’est pas soumis aux mêmes filtres de sécurité/rate limiting que l’endpoint public `/health`.
+
 ## 3. Watchdog Docker
 
 ### 3.1 Script `scripts/watchdog.sh`
@@ -39,7 +45,7 @@ Ce document décrit le système d’auto-réparation du backend GammonGuru côt�
 - Surveille un service Docker (par défaut `app`) toutes les 30 secondes.
 - Vérifie :
   - L’état Docker `healthy/unhealthy` (si un healthcheck est défini).
-  - L’accessibilité HTTP de `/health`.
+  - L’accessibilité HTTP de `/health/internal` via `docker compose exec` à l’intérieur du conteneur.
 - Si l’un des deux est KO :
   - Logue l’événement dans `docker-health.txt`.
   - Relance le service via `docker compose restart` avec un backoff exponentiel (5s → 10s → … → max 60s).
@@ -47,9 +53,9 @@ Ce document décrit le système d’auto-réparation du backend GammonGuru côt�
 ### 3.2 Lancement
 
 ```bash
-bash scripts/watchdog.sh         # Surveille le service 'app' sur http://localhost:3000/health
+bash scripts/watchdog.sh         # Surveille le service 'app' via /health/internal dans le conteneur
 # ou
-SERVICE_NAME=app HEALTH_URL=http://localhost:3000/health bash scripts/watchdog.sh
+SERVICE_NAME=app HEALTH_URL=http://localhost:3000/health/internal bash scripts/watchdog.sh
 ```
 
 ## 4. Script de redeploy local
@@ -60,7 +66,7 @@ SERVICE_NAME=app HEALTH_URL=http://localhost:3000/health bash scripts/watchdog.s
   - `docker compose -f docker-compose.dev.yml build`
   - `docker compose -f docker-compose.dev.yml up -d`
   - `docker compose -f docker-compose.dev.yml ps`
-  - `curl -i http://localhost:3000/health`
+  - `docker compose -f docker-compose.dev.yml exec -T app curl -i http://localhost:3000/health/internal`
 
 ### 4.2 Utilisation
 

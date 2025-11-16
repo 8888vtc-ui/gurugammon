@@ -50,9 +50,9 @@ ENV NODE_ENV=production
 ENV PORT=3000
 EXPOSE 3000
 
-# Healthcheck
+# Healthcheck – utilise l'endpoint interne non filtré
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD curl -fsS http://localhost:${PORT}/health || exit 1
+  CMD curl -fsS http://localhost:${PORT:-3000}/health/internal || exit 1
 
 # Default command
 CMD ["node", "dist/server.js"]

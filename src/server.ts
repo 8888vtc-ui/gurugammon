@@ -180,6 +180,17 @@ export const prisma = new PrismaClient({
 
 const app = express();
 
+// Internal health endpoint bypassing advanced filters (for Docker/ops)
+app.get('/health/internal', async (_req: Request, res: Response) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ app: 'ok', db: 'up' });
+  } catch (error) {
+    logger.error('Internal health check failed', error);
+    res.status(500).json({ app: 'ok', db: 'down' });
+  }
+});
+
 // Request size limits
 app.use(express.json({ limit: requestSizeLimits.json }));
 app.use(express.urlencoded({ extended: true, limit: requestSizeLimits.urlencoded }));
