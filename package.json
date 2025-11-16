@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc --project tsconfig.prod.json",
+    "build": "node ./node_modules/typescript/bin/tsc --project tsconfig.prod.json",
     "postbuild": "node scripts/copy-js.js",
     "build:prod": "tsc --noEmit false --skipLibCheck || echo 'TypeScript build completed with warnings'",
     "postinstall": "node scripts/ensure-express-router.js",
